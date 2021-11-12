@@ -1,22 +1,126 @@
 #### mobility data ####
 gm_type <- c("retail", "grocery", "parks", "transit", "work", "residential")
-gm <- fread("https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv") %>%
-  .[sub_region_1 == "" & sub_region_2 == "" & metro_area == ""] %>%
-  .[, wb := countrycode::countrycode(
-    country_region,
-    "country.name",
-    "iso3c"
-  )] %>%
-  .[, !c(
-    "sub_region_1", "sub_region_2", "metro_area", "iso_3166_2_code",
-    "census_fips_code", "country_region_code", "place_id"
-  )] %>%
-  setnames(., c(
-    "country_name", "date",
-    gm_type, "iso3c"
-  )) %>%
-  mutate_at(gm_type, as.numeric) %>%
-  filter(iso3c %in% members$iso3c) -> gm
+# gm <- fread("https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv") %>%
+#   .[sub_region_1 == "" & sub_region_2 == "" & metro_area == ""] %>%
+#   .[, wb := countrycode::countrycode(
+#     country_region,
+#     "country.name",
+#     "iso3c"
+#   )] %>%
+#   .[, !c(
+#     "sub_region_1", "sub_region_2", "metro_area", "iso_3166_2_code",
+#     "census_fips_code", "country_region_code", "place_id"
+#   )] %>%
+#   setnames(., c(
+#     "country_name", "date",
+#     gm_type, "iso3c"
+#   )) %>%
+#   mutate_at(gm_type, as.numeric) %>%
+#   filter(iso3c %in% members$iso3c) -> gm
+# 
+# ###### project mobility ####
+# gm %>%
+#   melt(.,
+#        id.vars = c("country_name", "iso3c", "date"),
+#        measures.var = gm_type) %>%
+#   .[, c("m",
+#         "dow",
+#         "doy",
+#         "d",
+#         "variable",
+#         "value") := list(factor(month(date), levels = 1:12),
+#                          factor(lubridate::wday(date)),
+#                          lubridate::yday(date),
+#                          as.numeric(date),
+#                          factor(variable),
+#                          (value + 100)/100)] %>%
+#   left_join(., si %>%
+#               mutate(d = as.numeric(date)) %>%
+#               .[,c("d", "iso3c", "StringencyIndex")],
+#             by = c("iso3c", "d")) %>%
+#   filter(date < max(si$date)) %>%
+#   filter(variable %in% c("retail",
+#                          "transit",
+#                          "grocery",
+#                          "work"),
+#          !is.na(value)) %>%
+#   mutate(iso3c = factor(iso3c),
+#          date_num = as.numeric(date)) -> tab
+# # 
+# # #  
+# fit <- gam(formula = value ~  dow + s(iso3c, bs = "re")  +
+#              dow*variable + s(StringencyIndex) + m, #+ s(date_num),
+#            data = tab,
+#            na.action = na.omit)
+# # 
+# summary(fit)
+# # 
+# CJ(date = seq(range(tab$date)[1],
+#               as.Date("2022-12-31"),
+#               by = 1),
+#    iso3c = unique(tab$iso3c),
+#    variable = c("retail",
+#                 "transit",
+#                 "grocery",
+#                 "work")) %>%
+#   .[, c("dow",
+#         "doy",
+#         "m",
+#         "date_num") := list(lubridate::wday(date) %>% factor,
+#                             lubridate::yday(date),
+#                             month(date),
+#                             if_else(date <= max(tab$date),
+#                                     as.numeric(date),
+#                                     as.numeric(max(tab$date))))]  %>%
+#   # .[, m := if_else(m == 12, 11, m)] %>%
+#   # .[, m := if_else(m == 1, 2, m)] %>%
+#   .[, m := factor(m)] %>%
+#   .[, date := as.character(date)] %>%
+#   left_join(si[,c("iso3c","date", "StringencyIndex")] %>%
+#               mutate(date = as.character(date)),
+#             by = c("iso3c", "date")) %>%
+#   split(by = "variable") %>%
+#   map(arrange, date) %>%
+#   bind_rows() %>%
+#   filter(iso3c %in% unique(tab$iso3c)) -> pre_tab
+# 
+# pre_tab[,"value"] <- predict(fit, newdata = pre_tab)
+# # 
+# pre_tab %>%
+#   mutate(variable = paste0(variable,"_predicted")) %>%
+#   dplyr::select(date, iso3c, variable, value) %>%
+#   pivot_wider(names_from = variable,
+#               values_from = value) %>%
+#   left_join(gm %>%
+#               mutate(date = as.character(date)) %>%
+#               dplyr::select(-country_name),
+#             by = c("date","iso3c")) %>%
+#   mutate(grocery_c = if_else(is.na(grocery), grocery_predicted, (grocery+100)/100),
+#          retail_c = if_else(is.na(retail), retail_predicted, (retail+100)/100),
+#          transit_c = if_else(is.na(transit), transit_predicted, (transit+100)/100),
+#          work_c = if_else(is.na(work), work_predicted, (work+100)/100),
+#          grocery_source = if_else(is.na(grocery), "gam", "obs"),
+#          retail_source = if_else(is.na(retail), "gam", "obs"),
+#          transit_source = if_else(is.na(transit), "gam", "obs"),
+#          work_source = if_else(is.na(work), "gam", "obs"),
+#          ) %>%
+#   dplyr::select(date, iso3c, 
+#                 ends_with("_c"),
+#                 ends_with("_source")) %>%
+#   pivot_longer(cols = ends_with("_c"),
+#                names_to = "setting",
+#                values_to = "mobility") %>%
+#   pivot_longer(cols = ends_with("_source")) %>%
+#   separate(setting, into = c("setting1","seg1")) %>%
+#   separate(name, into = c("setting2", "seg2")) %>%
+#   filter(setting1 == setting2,
+#          !is.na(value)) %>%
+#   dplyr::select(-seg1, -seg2, -setting2) %>%
+#   rename(setting = setting1) -> tmp
+# 
+# # imputed by time
+# write_rds(tmp, "data/gm_t.rds")
+gm <- read_rds("data/gm_t.rds")
 
 CJ(iso3c = members$iso3c,
    date = unique(gm$date)) %>%
@@ -26,80 +130,85 @@ CJ(iso3c = members$iso3c,
               rownames_to_column(var = "country_index") %>%
               rename(iso3c = ISO3_CODE),
             by = "iso3c") %>%
-  left_join(gm, by = c("iso3c", "date")) %>%
+  left_join(gm %>%
+              dplyr::select(-value) %>%
+              pivot_wider(names_from = setting, values_from = mobility), 
+            by = c("iso3c", "date")) %>%
   mutate(source = if_else(is.na(retail), "assumed", "empirical")) %>%
   dplyr::select(-source) -> gm
+
+gm_tmp <- gm 
+
+lapply(which(colnames(gm) %in% gm_type[!(gm_type %in% c("parks","residential"))]),
+       function(i) {which(is.na(data.frame(gm)[,i]))}) %>%
+  unlist %>%
+  unique %>%
+  sort -> r_missing
 #
-# gm_tmp <- gm %>%
-#   mutate(source = "obervation")
+for(r in r_missing){
+  tmp <- gm[r,]
+  # venues to
+  v_tmp <- tmp %>%
+    pivot_longer(cols = colnames(gm)[4:7]) %>%
+    filter(is.na(value)) %>%
+    pull(name)
+
+  gm_tmp %>%
+    filter(country_index %in% nb[[as.numeric(tmp$country_index)]],
+           date == tmp$date) %>%
+    dplyr::select(colnames(gm)[4:7]) %>%
+    colMeans(., na.rm = T) -> imputed_vals
+
+  for(v in v_tmp){
+    imputed_vals[v] -> gm_tmp[r,v]
+  }
+  gm_tmp[r,"source"] <- "assumed"
+
+  print(r)
+}
 #
-# lapply(which(colnames(gm) %in% gm_type[!(gm_type %in% c("parks","residential"))]),
-#        function(i) {which(is.na(data.frame(gm)[,i]))}) %>%
-#   unlist %>%
-#   unique %>%
-#   sort -> r_missing
+lapply(which(colnames(gm_tmp) %in% gm_type[!(gm_type %in% c("parks",
+                                                            "residential"))]),
+       function(i) {which(is.na(data.frame(gm_tmp)[,i]))}) %>%
+  unlist %>%
+  unique %>%
+  sort -> r_missing
 #
-# for(r in r_missing){
-#   tmp <- gm[r,]
-#   # venues to
-#   v_tmp <- tmp %>%
-#     pivot_longer(cols = gm_type) %>%
-#     filter(is.na(value),
-#            !(name %in% c("parks","residential"))) %>%
-#     pull(name)
-#
-#   gm_tmp %>%
-#     filter(country_index %in% nb[[as.numeric(tmp$country_index)]],
-#            date == tmp$date) %>%
-#     dplyr::select(gm_type) %>%
-#     colMeans(., na.rm = T) -> imputed_vals
-#
-#   for(v in v_tmp){
-#     imputed_vals[v] -> gm_tmp[r,v]
-#   }
-#   gm_tmp[r,"source"] <- "assumed"
-#
-#   print(r)
-# }
-#
-# lapply(which(colnames(gm_tmp) %in% gm_type[!(gm_type %in% c("parks","residential"))]),
-#        function(i) {which(is.na(data.frame(gm_tmp)[,i]))}) %>%
-#   unlist %>%
-#   unique %>%
-#   sort -> r_missing
-#
-# for(r in r_missing){
-#   tmp <- gm[r,]
-#   # venues to
-#   v_tmp <- tmp %>%
-#     pivot_longer(cols = gm_type) %>%
-#     filter(is.na(value),
-#            !(name %in% c("parks","residential"))) %>%
-#     pull(name)
-#
-#   gm_tmp %>%
-#     filter(country_index %in% nb[[as.numeric(tmp$country_index)]],
-#            date == tmp$date) %>%
-#     dplyr::select(gm_type) %>%
-#     colMeans(., na.rm = T) -> imputed_vals
-#
-#   for(v in v_tmp){
-#     imputed_vals[v] -> gm_tmp[r,v]
-#   }
-#   gm_tmp[r,"source"] <- "assumed"
-#
-#   print(r)
-# }
-#
+for(r in r_missing){
+  tmp <- gm[r,]
+  # venues to
+  v_tmp <- tmp %>%
+    pivot_longer(cols = gm_type[c(1,2,4,5)]) %>%
+    filter(is.na(value)) %>%
+    pull(name)
+
+  gm_tmp %>%
+    filter(country_index %in% nb[[as.numeric(tmp$country_index)]],
+           date == tmp$date) %>%
+    dplyr::select(gm_type[c(1,2,4,5)]) %>%
+    colMeans(., na.rm = T) -> imputed_vals
+
+  for(v in v_tmp){
+    imputed_vals[v] -> gm_tmp[r,v]
+  }
+  gm_tmp[r,"source"] <- "assumed"
+
+  print(r)
+}
+
 # gm_tmp %>%
-#   dplyr::select(-parks, -residential) %>%
+#   # dplyr::select(-parks, -residential) %>%
 #   pivot_longer(cols = c("retail", "grocery", "transit", "work")) %>%
+#   mutate(date = ymd(date)) %>% 
 #   ggplot(., aes(x = date, y = value, group = name, color = name)) +
 #   geom_line() +
-#   facet_wrap(~iso3c, scales = "free")
+#   facet_wrap(~iso3c, scales = "free") -> p
 
-# write_rds(gm_tmp, "data/gm.rds")
-gm <- read_rds("data/gm.rds")
+# ggsave("figs/supplemental/mobility_imputed.png", p,
+#        width = 20, height = 10)
+
+# write_rds(gm_tmp, "data/gm_ts.rds")
+gm_ts <- read_rds("data/gm_ts.rds")
 
 # gm %>% 
 #   ggplot(., aes(x = date, y = get("residential"), group = iso3c)) +
@@ -136,8 +245,8 @@ curves <- data.table(
   perc = round(seq(0, 1.25, 0.01), 2)
 )
 
-gm %>% 
-  mutate_at(vars(gm_type), function(x) (x + 100)/100) %>% 
+gm_ts %>% 
+  # mutate_at(vars(gm_type[c(1,2,4,5)]), function(x) (x + 100)/100) %>% 
   mutate(work = if_else(work > 1.25, 1.25, work),
          othx = 0.345*retail + 0.445*transit + 0.21*grocery,
          othx = if_else(othx > 1.25, 1.25, othx),
@@ -145,79 +254,78 @@ gm %>%
          othx = round(othx, 2)) %>% 
   left_join(curves[,c("perc","work_scaler")], by = c("work" = "perc")) %>%
   left_join(curves[,c("perc", "other_scaler")], by = c("othx" = "perc")) %>%
-  dplyr::select(-c(grocery, retail, transit, work, othx, parks, residential)) %>%
+  dplyr::select(-c(grocery, retail, transit, work, othx, source)) %>%
   rename(work = work_scaler,
-         other = other_scaler) -> gm_scaled
+         other = other_scaler) %>% 
+  mutate(date = ymd(date)) -> gm_scaled
 
 gm_scaled %>% 
+  mutate(date = ymd(date)) %>% 
   ggplot(., aes(x = date, y = work)) +
   geom_line() +
   facet_wrap(~iso3c)
 
+country_data_length <-
+  gm_scaled %>% group_by(iso3c) %>% group_split() %>% map(nrow) %>% unlist()
 
-###### project mobility ####
-gm %>%
-  melt(.,
-       id.vars = c("country_name", "iso3c", "date"),
-       measures.var = gm_type) %>%
-  .[, c("m",
-        "dow",
-        "doy",
-        "d",
-        "variable",
-        "value") := list(factor(month(date), levels = 1:12),
-                         factor(lubridate::wday(date)),
-                         lubridate::yday(date),
-                         as.numeric(date),
-                         factor(variable),
-                         (value + 100)/100)] %>%
-  left_join(., si %>%
-              mutate(d = as.numeric(date)) %>%
-              .[,c("d", "iso3c", "StringencyIndex")],
-            by = c("iso3c", "d")) %>%
-  filter(date < si_stopdate) %>%
-  filter(variable %in% c("retail",
-                         "transit",
-                         "grocery",
-                         "work")) %>%
-  mutate(iso3c = factor(iso3c),
-         date_num = as.numeric(date)) -> tab
-#  
-fit <- gam(formula = value ~  dow + s(iso3c, bs = "re") + variable +
-             dow + s(StringencyIndex) + m + s(date_num),
-           data = tab,
-           na.action = na.omit)
+schedule_raw <- gm_scaled %>%
+  mutate(home = 1,
+         date = as.character(date)) %>%
+  left_join(oxcgrt_C1 %>%
+              dplyr::select(date, C1, iso3c) %>%
+              setNames(c("date", "school", "iso3c")), # %>%
+            # mutate(school = case_when(school == 0 ~ 1,
+            #                           is.na(school) ~ 1,
+            #                           school == 3 ~ 0,
+            #                           TRUE ~ 0.5),
+            by = c("date", "iso3c"))  %>%
+  # filter(is.na(school)) %>% pull(date) %>% table
+  # filter(is.na(school))
+  # dplyr::filter(!is.na(school)) %>%
+  mutate(school = case_when(school == 0 ~ 1,
+                            school == 3 ~ 0,
+                            is.na(school) ~ 1,
+                            TRUE ~ 0.5)) %>% 
+  dplyr::select(iso3c, date, home, work, school, other)
 
-summary(fit)
+CJ(date = seq(as.Date("2019-12-01"), as.Date("2020-02-14"),1),
+   iso3c = unique(si$iso3c)) %>%
+  .[,status := "assumed"] %>%
+  .[,c("home",
+       "work",
+       "school",
+       "other",
+       "date") :=
+      list(1,1,1,1,
+           as.character(date))] -> schedule_pre
 
-CJ(date = seq(range(tab$date)[1],
-              as.Date("2022-12-31"),
-              by = 1),
-   iso3c = unique(tab$iso3c),
-   variable = c("retail",
-                "transit",
-                "grocery",
-                "work")) %>%
-  .[, c("dow",
-        "doy",
-        "m",
-        "date_num") := list(lubridate::wday(date) %>% factor,
-                            lubridate::yday(date),
-                            month(date),
-                            as.numeric(date))]  %>%
-  .[, m := if_else(m == 12, 11, m)] %>%
-  .[, m := if_else(m == 1, 2, m)] %>%
-  .[, m := factor(m)] %>%
-  .[, date := as.character(date)] %>% 
-  left_join(si[,c("iso3c","date", "StringencyIndex")] %>% 
-              mutate(date = as.character(date)),
-            by = c("iso3c", "date")) %>%
-  split(by = "variable") %>%
-  map(arrange, date) %>%
-  bind_rows() -> pre_tab
+# # school holidays
+schedule_raw %>%
+  bind_rows(schedule_pre) %>%
+  arrange(date) %>%
+  mutate(date = lubridate::ymd(date),
+         month = lubridate::month(date),
+         day = lubridate::day(date),
+         year = lubridate::year(date)) %>%
+  mutate(holiday = if_else(
+    #winter holiday,
+    (year > 2020 & month == 12 & day >=  15) |
+      (year > 2020 & month == 1 & day < 5) |
+      # summer holiday
+      month %in% c(7,8),
+    T,
+    F),
+    school = if_else(holiday, 0, school)) %>% 
+  dplyr::select(-holiday, -status, -month, -day, -year) %>% 
+  mutate(date = ymd(date)) -> tmp
 
-pre_tab %>% 
-  ggplot(., aes(x = date, y = StringencyIndex, 
-                color = variable, group = iso3c)) +  
-  geom_line() +
-  facet_wrap(~iso3c)
+# tmp %>% 
+#   ggplot(., aes(x = date, y = other, group = iso3c)) +
+#   geom_line() +
+#   facet_wrap(~iso3c) +
+#   theme_cowplot() -> p
+# 
+# ggsave("figs/supplemental/contact_other_imputed.png", p,
+#        width = 20, height = 10)
+
+# write_rds(tmp, "data/schedule_raw.rds")

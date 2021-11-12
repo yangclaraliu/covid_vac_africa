@@ -83,12 +83,11 @@ si %>%
                names_to = "iso3c",
                values_to = "StringencyIndex") -> si
 
-
-# si %>% 
+members[which((members$iso3c %in% si$iso3c)),] -> members
 #   ggplot(., aes(x = date, y = StringencyIndex, col = source)) +
 #   geom_point() +
 #   geom_line() +
 #   facet_wrap(~iso3c) +
 #   ggsci::scale_color_lancet()-> p
-# 
+
 # ggsave("figs/supplemental/si_imputed.png", plot = p, width = 20, height = 10)

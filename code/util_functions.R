@@ -8,8 +8,8 @@ gen_country_basics <- function(country,
   
   require(countrycode)
   
-  wb_tmp = countrycode(country, "country.name", "wb")
-  c_tmp = schedule_raw %>% filter(wb == wb_tmp) %>% 
+  iso3c_tmp = countrycode(country, "country.name", "iso3c")
+  c_tmp = schedule_raw %>% filter(iso3c == iso3c_tmp) %>% 
     filter(date >= date_start,
            date <= date_end)
   
@@ -59,7 +59,7 @@ gen_country_basics <- function(country,
     parameter = "contact",
     pops = numeric(),
     mode = "assign",
-    values = split(c_tmp[,4:7],
+    values = split(c_tmp[,3:6],
                    seq(nrow(c_tmp))) %>%
       map(unlist) %>%
       map(as.vector) %>%
@@ -90,29 +90,6 @@ update_vac_char <- function(para,
 
   # return results
   return(para)
-}
-
-#### generate processes, from SA2UK ####
-cm_multinom_process <- function(
-  src, outcomes, delays,
-  report = ""
-) {
-  if ("null" %in% names(outcomes)) {
-    if (length(report) != length(outcomes)) report <- rep(report, length(outcomes))
-    report[which(names(outcomes)=="null")] <- ""
-    if (!("null" %in% names(delays))) {
-      delays$null <- c(1, rep(0, length(delays[[1]])-1))
-    }
-  } else if (!all(rowSums(outcomes)==1)) {
-    report <- c(rep(report, length(outcomes)), "")
-    outcomes$null <- 1-rowSums(outcomes)
-    delays$null <- c(1, rep(0, length(delays[[1]])-1))
-  }
-  nrow <- length(outcomes)
-  list(
-    source = src, type="multinomial", names=names(outcomes), report = report,
-    prob = t(as.matrix(outcomes)), delays = t(as.matrix(delays))
-  )
 }
 
 change_VOC <- function(
@@ -1017,6 +994,27 @@ exp_ve <- function(ve_d_o,  # disease blocking VE observed
   return(ve_d)
 }
 
+cm_multinom_process <- function(
+  src, outcomes, delays,
+  report = ""
+) {
+  if ("null" %in% names(outcomes)) {
+    if (length(report) != length(outcomes)) report <- rep(report, length(outcomes))
+    report[which(names(outcomes)=="null")] <- ""
+    if (!("null" %in% names(delays))) {
+      delays$null <- c(1, rep(0, length(delays[[1]])-1))
+    }
+  } else if (!all(rowSums(outcomes)==1)) {
+    report <- c(rep(report, length(outcomes)), "")
+    outcomes$null <- 1-rowSums(outcomes)
+    delays$null <- c(1, rep(0, length(delays[[1]])-1))
+  }
+  nrow <- length(outcomes)
+  list(
+    source = src, type="multinomial", names=names(outcomes), report = report,
+    prob = t(as.matrix(outcomes)), delays = t(as.matrix(delays))
+  )
+}
 
 
 
