@@ -31,6 +31,10 @@ cm_populations %>%
                 !is.na(iso3c)) %>% 
   left_join(cm_populations, by = "name") -> pop
 
+pop %>%
+  group_by(name, iso3c) %>% 
+  summarise(tot = sum(f + m)) -> vac_denom
+  
 #### get contact matrices ####
 path_tmp <- "C:/Users/eideyliu/Dropbox/Github_Data/COVID-Vac_Delay/"
 load(paste0(path_tmp, "contact_all.rdata"))
@@ -115,7 +119,7 @@ owid_epi <- qread("data/epi.qs")
 #   left_join(owid_vac, by = "location") -> owid_vac
 # 
 # qsave(owid_vac, "data/owid_vac.qs")
-owid_vac <- qread("data/epi.qs")
+owid_vac <- qread("data/owid_vac.qs")
 
 #### load stringency index ####
 source("code/0_1_SI.R")
@@ -146,4 +150,21 @@ sus <- c(
   0.7859512, 0.8585759, 0.8585759, 0.7981468, 0.7981468,
   0.8166960, 0.8166960, 0.8784811, 0.8784811, 0.7383189, 0.7383189
 )
+
+#### vaccine roll-out schedules ####
+ROS <- data.frame(ms0 = c(0,0, 0),
+           ms1 = c(0.03, 0.03, 0.03),
+           ms2 = c(0.1, 0.2, 0.3),
+           ms3 = c(0.2,0.4, 0.6)) %>% 
+  rownames_to_column(var = "ROS") %>% 
+  pivot_longer(starts_with("ms")) %>% 
+  rename(milestone_date = (name),
+         coverage = value) %>% 
+  mutate(milestone_date = factor(milestone_date,
+                                 levels = paste0("ms",0:3),
+                                 labels = c("2021-03-01",
+                                            "2021-06-30",
+                                            "2021-12-31",
+                                            "2022-12-31")) %>% 
+           ymd)
 
