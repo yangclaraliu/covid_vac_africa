@@ -1,5 +1,6 @@
 require(pacman)
-p_load(tidyverse, sf, data.table, countrycode, mgcv)
+p_load(tidyverse, sf, data.table, countrycode, mgcv,
+       magrittr, testthat)
 
 ##### load covidm #####
 cm_path <- "code/covidm_for_fitting/"
