@@ -11,15 +11,32 @@ source(paste0(cm_path, "/R/covidm.R"))
 source("code/util_functions.R")
 
 #### Find African Union Members ####
-# rvest::read_html("https://au.int/en/memberstates") %>% 
-#   rvest::html_table() %>% 
-#   .[[1]] %>% .[,2] %>% 
-#   setNames("country_name") %>% 
-#   mutate(iso3c = countrycode(country_name, 
-#                              "country.name", 
+# rvest::read_html("https://au.int/en/memberstates") %>%
+#   rvest::html_table() %>%
+#   .[[1]] %>% .[,2] %>%
+#   setNames("country_name") %>%
+#   mutate(iso3c = countrycode(country_name,
+#                              "country.name",
 #                              "iso3c")) -> members
+# members[members$country_name == "Somali Republic", "iso3c"] <- "SOM"
+# members[members$country_name == "Saharawi Arab Democratic Republic", "iso3c"] <- "ESH"
+# 
+# cm_populations %>%
+#   filter(location_type == 4) %>%
+#   dplyr::select(name) %>% distinct() %>%
+#   mutate(iso3c = countrycode(name, "country.name", "iso3c")) %>%
+#   filter(iso3c %in% members$iso3c,
+#          !grepl("\\|",name)) -> cn_dic
+# 
+# 
+# members %>%
+#   left_join(cn_dic, by = "iso3c") %>%
+#   rename(name_official = country_name,
+#          name_internal = name) -> members
+# # 
 # write_rds(members,"data/members.rds")
 members <- read_rds("data/members.rds")
+members_complete <- read_rds("data/members.rds")
 
 #### get population information ####
 # population structure is available for all 52 countries remaining
@@ -27,7 +44,7 @@ cm_populations %>%
   filter(location_type == 4) %>% 
   dplyr::select(name) %>% distinct() %>% 
   mutate(iso3c = countrycode(name, "country.name", "iso3c")) %>% 
-  dplyr::filter(iso3c %in% members$iso3c) %>% 
+  dplyr::filter(iso3c %in% members_complete$iso3c) %>% 
   dplyr::filter(!grepl("\\|",name),
                 !is.na(iso3c)) %>% 
   left_join(cm_populations, by = "name") -> pop
@@ -35,7 +52,7 @@ cm_populations %>%
 pop %>%
   group_by(name, iso3c) %>% 
   summarise(tot = sum(f + m)) -> vac_denom
-  
+
 #### get contact matrices ####
 path_tmp <- "C:/Users/eideyliu/Dropbox/Github_Data/COVID-Vac_Delay/"
 load(paste0(path_tmp, "contact_all.rdata"))
@@ -43,59 +60,77 @@ load(paste0(path_tmp, "contact_work.rdata"))
 load(paste0(path_tmp, "contact_home.rdata"))
 load(paste0(path_tmp, "contact_school.rdata"))
 load(paste0(path_tmp, "contact_others.rdata"))
-members[-which(!members$iso3c %in% names(contact_all)),] -> members
-members %>% 
-  left_join(pop[,c("name","iso3c")], by = "iso3c") %>% 
-  dplyr::select(-country_name) %>% distinct() %>% 
-  mutate_all(as.character)-> members
+
+members_complete[which(!members_complete$iso3c %in% names(contact_all)),] 
 
 tmp <- cm_parameters_SEI3R("Thailand")
 ag_labels <- tmp$pop[[1]]$group_names; rm(tmp)
 
-for(i in 1:nrow(members)){
-    cm_matrices[[members$name[i]]]$home <-
-      as.matrix(contact_home[[members$iso3c[i]]]) 
-    
-    cm_matrices[[members$name[i]]]$work <-
-      as.matrix(contact_work[[members$iso3c[i]]]) 
-    
-    cm_matrices[[members$name[i]]]$school <-
-      as.matrix(contact_school[[members$iso3c[i]]]) 
-    
-    cm_matrices[[members$name[i]]]$other <-
-      as.matrix(contact_others[[members$iso3c[i]]])
-    
-    colnames(cm_matrices[[members$name[i]]]$home) <- ag_labels
-    colnames(cm_matrices[[members$name[i]]]$work) <- ag_labels
-    colnames(cm_matrices[[members$name[i]]]$school) <- ag_labels
-    colnames(cm_matrices[[members$name[i]]]$other) <- ag_labels
-    
-    rownames(cm_matrices[[members$name[i]]]$home) <- ag_labels
-    rownames(cm_matrices[[members$name[i]]]$work) <- ag_labels
-    rownames(cm_matrices[[members$name[i]]]$school) <- ag_labels
-    rownames(cm_matrices[[members$name[i]]]$other) <- ag_labels
+assign_contact <- function(x){
+  source <- x
+  if(x == "Western Sahara") { source = "Morocco" }
+  if(x == "Seychelles") { source = "Madagascar" }
+  if(x == "Somalia") { source = "Ethiopia" }
+  
+  iso_tmp <- members_complete$iso3c[which(members_complete$name_internal == source)]
+  
+  cm_matrices[[x]]$home <- as.matrix(contact_home[[iso_tmp]]) 
+  cm_matrices[[x]]$work <- as.matrix(contact_work[[iso_tmp]]) 
+  cm_matrices[[x]]$school <- as.matrix(contact_school[[iso_tmp]]) 
+  cm_matrices[[x]]$other <- as.matrix(contact_others[[iso_tmp]])
+  
+  colnames(cm_matrices[[x]]$home) <- ag_labels
+  colnames(cm_matrices[[x]]$work) <- ag_labels
+  colnames(cm_matrices[[x]]$school) <- ag_labels
+  colnames(cm_matrices[[x]]$other) <- ag_labels
+  
+  rownames(cm_matrices[[x]]$home) <- ag_labels
+  rownames(cm_matrices[[x]]$work) <- ag_labels
+  rownames(cm_matrices[[x]]$school) <- ag_labels
+  rownames(cm_matrices[[x]]$other) <- ag_labels
+  
+  return(cm_matrices)
+}
+
+for(i in 1:nrow(members_complete)){
+  cm_matrices <- assign_contact(members_complete$name_internal[i])
 }
 
 #### get shapefile ####
 read_sf(paste0(path_tmp, "CNTR_RG_60M_2020_4326.shp")) %>% 
-  filter(ISO3_CODE %in% members$iso3c) -> shape
-# 6, 13, 33, 38, 41
+  mutate(continent = countrycode(NAME_ENGL,
+                                 "country.name",
+                                 "continent")) %>% 
+  filter(continent == "Africa") %>% 
+  filter(ISO3_CODE != "SHN") -> shape
+
+ # 6, 13, 33, 38, 41
 nb <- spdep::poly2nb(shape)
+shape[c(6,13,26,36,41,44),]
 # 6 = Cape Verde
-nb[[6]] <- grep("Gambia|Senegal|Bissau",shape$NAME_ENGL)
-# 13
-nb[[13]] <- grep("Mozambique",shape$NAME_ENGL)
-# 33
-nb[[33]] <- grep("Gabon|Cameroon",shape$NAME_ENGL)
-# 38
-nb[[38]] <- grep("Mozambique",shape$NAME_ENGL)
-# 41
-nb[[41]] <- grep("Mozambique",shape$NAME_ENGL)
+nb[[6]] <- grep("Gambia|Senegal|Bissau",
+                shape$NAME_ENGL)
+# 13 = Comoros
+nb[[13]] <- grep("Mozambique",
+                 shape$NAME_ENGL)
+# 26 = Seychelles
+nb[[26]] <- grep("Kenya|Somali",
+                 shape$NAME_ENGL)
+
+# 36 = Sao Tome and Principe 
+nb[[36]] <- grep("Gabon|Cameroon",
+                 shape$NAME_ENGL)
+# 41 = Madagascar
+nb[[41]] <- grep("Mozambique",
+                 shape$NAME_ENGL)
+# 44 = Mauritius
+nb[[44]] <- grep("Mozambique",
+                 shape$NAME_ENGL)
 
 #### our world in data ####
 ###### epi data ####
 # owid_epi <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv")
-# # 
+# #
 # owid_epi[,"location"] %>% distinct() %>%
 #   mutate(iso3c = countrycode(location, "country.name", "iso3c")) %>%
 #   filter(!is.na(iso3c)) %>%
@@ -105,22 +140,35 @@ nb[[41]] <- grep("Mozambique",shape$NAME_ENGL)
 #   mutate_at(vars(c("deaths", "cases")), ~if_else(is.na(.), 0, .))%>%
 #   mutate_at(vars(c("deaths", "cases")), ~if_else(.<0, 0, .)) %>%
 #   data.table %>%
-#   .[,date := lubridate::ymd(date)] %>% 
-#   dplyr::filter(iso3c %in% members$iso3c) -> epi
+#   .[,date := lubridate::ymd(date)] %>%
+#   dplyr::filter(iso3c %in% members_complete$iso3c) -> epi
 # 
 # qsave(epi, "data/epi.qs")
 owid_epi <- qread("data/epi.qs")
+# which(!(members_complete$iso3c %in% owid_epi$iso3c))
+
+
 
 ###### vaccine coverage data ####
-# owid_vac <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations.csv") 
+# owid_vac <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations.csv")
 # owid_vac[,"location"] %>% distinct() %>%
 #   mutate(iso3c = countrycode(location, "country.name", "iso3c")) %>%
 #   filter(!is.na(iso3c),
-#          iso3c %in% members$iso3c) %>%
+#          iso3c %in% members_complete$iso3c) %>%
 #   left_join(owid_vac, by = "location") -> owid_vac
+# 
+# unique(owid_vac$iso3c) %>% length
 # 
 # qsave(owid_vac, "data/owid_vac.qs")
 owid_vac <- qread("data/owid_vac.qs")
+
+# members_complete[which(!(members_complete$iso3c %in% owid_vac$iso3c)),]
+# 
+# owid_vac %>% 
+#   filter(!is.na(people_vaccinated)) %>% 
+#   ggplot(., aes(x = date, y = people_vaccinated, group = iso3c)) +
+#   geom_line() +
+#   facet_wrap(~iso3c)
 
 #### load stringency index ####
 source("code/0_1_SI.R")

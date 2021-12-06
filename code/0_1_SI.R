@@ -1,15 +1,15 @@
-#### stringency index ####
+# ### stringency index ####
 # oxcgrt_raw <- fread("https://github.com/OxCGRT/covid-policy-tracker/raw/master/data/OxCGRT_latest.csv")
 # iso3c_dic <- oxcgrt_raw[,"CountryName"] %>%
 #   distinct() %>%
 #   mutate(iso3c = countrycode(CountryName, "country.name", "iso3c"))
 # 
-###### school related policies ####
+# ##### school related policies ####
 # oxcgrt_raw %>%
 #   filter(Jurisdiction == "NAT_TOTAL") %>%
 #   mutate(date = lubridate::ymd(Date)) %>%
-#   left_join(iso3c_dic, by = "CountryName") %>% 
-#   dplyr::filter(iso3c %in% members$iso3c) %>% 
+#   left_join(iso3c_dic, by = "CountryName") %>%
+#   dplyr::filter(iso3c %in% members_complete$iso3c) %>%
 #   dplyr::filter(C1_Flag == 1 | is.na(C1_Flag)) %>%
 #   dplyr::select(iso3c, date, `C1_School closing`) %>%
 #   rename(C1 = `C1_School closing`) %>%
@@ -29,6 +29,9 @@
 #                names_to = "iso3c",
 #                values_to = "C1") %>%
 #   mutate(C1 = if_else(is.na(C1), 0, C1)) -> oxcgrt
+# 
+# members_complete[which(!(members_complete$iso3c %in% oxcgrt$iso3c)),]
+# members_complete[which((members_complete$iso3c %in% oxcgrt$iso3c)),]
 # 
 # si <- oxcgrt_raw %>%
 #   dplyr::select(CountryName, Date, StringencyIndex) %>%
@@ -55,7 +58,7 @@
 # 
 # si %>%
 #   filter(date < si_stopdate,
-#          iso3c %in% members$iso3c,
+#          iso3c %in% members_complete$iso3c,
 #          iso3c != "COM") %>%
 #   group_by(iso3c) %>%
 #   arrange(date) %>%
@@ -63,7 +66,10 @@
 #   map(mutate, StringencyIndex = zoo::na.locf(StringencyIndex)) %>%
 #   bind_rows() %>%
 #   as.data.table() -> si
-
+# 
+# members_complete[which(!(members_complete$iso3c %in% si$iso3c)),]
+# members_complete[which((members_complete$iso3c %in% si$iso3c)),]
+# 
 # qsave(si, "data/si.qs")
 # qsave(oxcgrt, "data/oxcgrt.qs")
 
@@ -83,11 +89,38 @@ si %>%
                names_to = "iso3c",
                values_to = "StringencyIndex") -> si
 
-members[which((members$iso3c %in% si$iso3c)),] -> members
-#   ggplot(., aes(x = date, y = StringencyIndex, col = source)) +
-#   geom_point() +
-#   geom_line() +
-#   facet_wrap(~iso3c) +
-#   ggsci::scale_color_lancet()-> p
+# members[which((members$iso3c %in% si$iso3c)),] -> members
+si %>% 
+  ggplot(., aes(x = date, y = StringencyIndex, col = source)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~iso3c) +
+  ggsci::scale_color_lancet() -> p
 
 # ggsave("figs/supplemental/si_imputed.png", plot = p, width = 20, height = 10)
+
+# 
+si_missing <- members_complete[which(!members_complete$iso3c %in% si$iso3c),]$iso3c
+si_missing %>% 
+  map(~which(shape$ISO3_CODE == .)) %>% 
+  map(~nb[[.]]) %>% 
+  map(~shape[., ]) %>% 
+  map(pull, ISO3_CODE) %>% 
+  map(~si[si$iso3c %in% ., ]) %>% 
+  map(group_by, date) %>% 
+  map(summarise, StringencyIndex = mean(StringencyIndex, na.rm = T)) %>% 
+  setNames(si_missing) %>% 
+  bind_rows(.id = "iso3c") %>% 
+  mutate(source = "imputed") %>% 
+  dplyr::select(colnames(si)) %>% 
+  bind_rows(si) -> si_complete
+
+si_complete %>% 
+  ggplot(., aes(x = date, y = StringencyIndex, col = source)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~iso3c) +
+  ggsci::scale_color_lancet() -> p
+
+ggsave("figs/supplemental/si_imputed.png", plot = p, width = 20, height = 10)
+
