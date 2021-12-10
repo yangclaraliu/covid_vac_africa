@@ -66,8 +66,9 @@ members_complete[which(!members_complete$iso3c %in% names(contact_all)),]
 tmp <- cm_parameters_SEI3R("Thailand")
 ag_labels <- tmp$pop[[1]]$group_names; rm(tmp)
 
-assign_contact <- function(x){
-  source <- x
+for(i in 1:nrow(members_complete)){
+  
+  source <- x <- as.character(members_complete$name_internal[i])
   if(x == "Western Sahara") { source = "Morocco" }
   if(x == "Seychelles") { source = "Madagascar" }
   if(x == "Somalia") { source = "Ethiopia" }
@@ -88,12 +89,6 @@ assign_contact <- function(x){
   rownames(cm_matrices[[x]]$work) <- ag_labels
   rownames(cm_matrices[[x]]$school) <- ag_labels
   rownames(cm_matrices[[x]]$other) <- ag_labels
-  
-  return(cm_matrices)
-}
-
-for(i in 1:nrow(members_complete)){
-  cm_matrices <- assign_contact(members_complete$name_internal[i])
 }
 
 #### get shapefile ####
@@ -201,10 +196,10 @@ sus <- c(
 )
 
 #### vaccine roll-out schedules ####
-ROS <- data.frame(ms0 = c(0,0, 0),
-           ms1 = c(0.03, 0.03, 0.03),
-           ms2 = c(0.1, 0.2, 0.3),
-           ms3 = c(0.2,0.4, 0.6)) %>% 
+ROS <- data.frame(ms0 = c(0,0, 0, 0),
+           ms1 = c(0.03, 0.03, 0.03, 0.32),
+           ms2 = c(0.1, 0.2, 0.3, 0.8),
+           ms3 = c(0.2,0.4, 0.6, 0.8)) %>% 
   rownames_to_column(var = "ROS") %>% 
   pivot_longer(starts_with("ms")) %>% 
   rename(milestone_date = (name),

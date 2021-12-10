@@ -90,12 +90,12 @@ si %>%
                values_to = "StringencyIndex") -> si
 
 # members[which((members$iso3c %in% si$iso3c)),] -> members
-si %>% 
-  ggplot(., aes(x = date, y = StringencyIndex, col = source)) +
-  geom_point() +
-  geom_line() +
-  facet_wrap(~iso3c) +
-  ggsci::scale_color_lancet() -> p
+# si %>% 
+#   ggplot(., aes(x = date, y = StringencyIndex, col = source)) +
+#   geom_point() +
+#   geom_line() +
+#   facet_wrap(~iso3c) +
+#   ggsci::scale_color_lancet() -> p
 
 # ggsave("figs/supplemental/si_imputed.png", plot = p, width = 20, height = 10)
 
@@ -115,12 +115,12 @@ si_missing %>%
   dplyr::select(colnames(si)) %>% 
   bind_rows(si) -> si_complete
 
-si_complete %>% 
-  ggplot(., aes(x = date, y = StringencyIndex, col = source)) +
-  geom_point() +
-  geom_line() +
-  facet_wrap(~iso3c) +
-  ggsci::scale_color_lancet() -> p
-
-ggsave("figs/supplemental/si_imputed.png", plot = p, width = 20, height = 10)
+# si_complete %>% 
+#   ggplot(., aes(x = date, y = StringencyIndex, col = source)) +
+#   geom_point() +
+#   geom_line() +
+#   facet_wrap(~iso3c) +
+#   ggsci::scale_color_lancet() -> p
+# 
+# ggsave("figs/supplemental/si_imputed.png", plot = p, width = 20, height = 10)
 

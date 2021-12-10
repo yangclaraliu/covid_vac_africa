@@ -39,3 +39,4 @@ vignettes/*.pdf
 .Renviron
 
 code/covidm_for_fitting
+/data/

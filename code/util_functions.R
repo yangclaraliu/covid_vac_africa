@@ -13,7 +13,7 @@ gen_country_basics <- function(country,
     filter(date >= date_start,
            date <= date_end)
   
-  para = cm_parameters_SEI3R(dem_locations = country, 
+  para = cm_parameters_SEI3R(dem_locations = as.character(country), 
                              date_start = date_start, 
                              date_end = date_end,
                              dE  = cm_delay_gamma(2.5, 2.5, 
@@ -165,7 +165,7 @@ vac_policy <- function(para,
                        # prioritisation, assume 60+  all prioritised
                        priority = c(NA, NA, NA, NA,
                                     2,  2,  2,  2,
-                                    2,  2,  2,  2,
+                                  2,  2,  2,  2,
                                     1,  1,  1,  1),
                        # maximum feasible uptakes
                        cov_max = c(rep(0,2),
@@ -174,8 +174,8 @@ vac_policy <- function(para,
                        # the proportion of age groups at which we will compare
                        # rolling out dose 2s or more dose 1s
                        # p_change = 0.7,
-                       supply_delay = 20, # unit = weeks
-                       dose_interval = c(4, 16)
+                       supply_delay = 24, # unit = weeks
+                       dose_interval = c(4)
                        
 ){
   date_start = para$date0
@@ -195,6 +195,14 @@ vac_policy <- function(para,
            t_diff = c(NA, diff(t)),
            doses_daily = dplyr::lead(doses/t_diff, 1),
            milestone_marker = !is.na(milestone_cov))-> tmp_schedule
+  
+  if(length(unique(tail(tmp_schedule$milestone_cov,2))) == 1){
+    row_max <- nrow(tmp_schedule)
+    tmp_schedule$doses_daily[row_max-1] <- 0
+    tmp_schedule$doses[row_max] <- tmp_schedule$doses[row_max-1]  
+    tmp_schedule$cov[row_max] <- tmp_schedule$cov[row_max-1]  
+  }
+    
   
   # details of the target population
   tmp_pop <- data.table(n_pop = para$pop[[1]]$size) %>% 
@@ -263,11 +271,11 @@ vac_policy <- function(para,
     
     data.table(t_dose1 = as.numeric(NA), t_dose2 = as.numeric(NA), status = as.character(NA), elapse = as.numeric(NA)) %>% 
       bind_cols(daily_vac_scenarios %>% dplyr::select(ends_with("_d1")) %>% .[1,]) %>% 
-      mutate_at(vars(starts_with("Y", ignore.case = F)), function(x) x = as.numeric(NA))-> pending
+      mutate_at(vars(starts_with("Y", ignore.case = F)), function(x) x = as.numeric(NA)) -> pending
     
     # complete vaccinating the first priority
     for(t in vacc_start:nrow(daily_vac_scenarios)){
-    # for(t in vacc_start:760){
+    # for(t in vacc_start:716){
       # whether or not we allocate dose 2
       switch_dose2 <- any(pending$elapse >= interval*7 & pending$status == "incomplete", na.rm = T)
       # saturation status
@@ -279,7 +287,9 @@ vac_policy <- function(para,
         mutate(age_group = parse_number(age_group)) %>% 
         left_join(tmp_priorities %>% bind_rows() %>% rename(priority = value),
                   by = "age_group") %>%
-        left_join(tmp_pop %>% rownames_to_column(var = "age_group") %>% mutate(age_group = as.numeric(age_group)),
+        left_join(tmp_pop %>% 
+                    rownames_to_column(var = "age_group") %>% 
+                    mutate(age_group = as.numeric(age_group)),
                   by = "age_group") %>% 
         mutate(saturated = value >= n_tar) %>% 
         filter(!is.na(priority)) %>% group_by(priority, dose) %>% 
@@ -321,6 +331,7 @@ vac_policy <- function(para,
                                      as.integer(t_dose2)),
                    elapse = if_else(status == "incomplete", elapse+1, elapse))
         }
+        
         # if there is supply surplus, beyond covering everyone timely, additional individuals can be 
         # vaccinated with dose 1
         if(doses_available > doses_needed){
@@ -333,6 +344,7 @@ vac_policy <- function(para,
             v <- doses_needed*tmp_pop_prop[[2]]; daily_vac_scenarios[t,tmp_tar2[[2]] := as.list(v)]; rm(v) 
             # daily_vac_scenarios[t,tmp_tar2[[2]]] <- t(doses_needed*tmp_pop_prop[[2]])
           }
+          
           pending %<>% 
             mutate(status = if_else(!is.na(t_dose1) & t_dose1 %in% tmp$t_dose1 & status == "incomplete",
                                     "complete",
@@ -358,7 +370,8 @@ vac_policy <- function(para,
                       mutate(elapse = 0,
                              status = "incomplete",
                              t_dose1 = as.numeric(t_dose1),
-                             t_dose2 = as.numeric(NA))) 
+                             t_dose2 = as.numeric(NA)))
+          
         }
         # TO-DO
         if(doses_available < doses_needed){
@@ -417,14 +430,14 @@ vac_policy <- function(para,
         }
       
       if(!is.na(switch_dose2) & switch_dose2 == F){
-        if (saturated[dose == "d1" & priority == 1,]$saturated == FALSE) {
+        if(saturated[dose == "d1" & priority == 1,]$saturated == FALSE) {
           v <- daily_vac_scenarios[t,]$supply_daily*tmp_pop_prop[[1]]; daily_vac_scenarios[t, tmp_tar[[1]] := as.list(v)]; rm(v) 
           # daily_vac_scenarios[t,tmp_tar[[1]]] <- t(daily_vac_scenarios[t,]$supply_daily*tmp_pop_prop[[1]])
         }
         
-        if (saturated[dose == "d1" & priority == 1,]$saturated == TRUE &
+        if(saturated[dose == "d1" & priority == 1,]$saturated == TRUE &
             saturated[dose == "d1" & priority == 2,]$saturated == FALSE) {
-          v <- daily_vac_scenarios[t,]$supply_daily*tmp_pop_prop[[2]];  daily_vac_scenarios[t,tmp_tar[[2]] := as.list(v)]; rm(v)
+          v <- daily_vac_scenarios[t,]$supply_daily*tmp_pop_prop[[2]]; daily_vac_scenarios[t,tmp_tar[[2]] := as.list(v)]; rm(v)
           # daily_vac_scenarios[t,tmp_tar[[2]]] <- t(daily_vac_scenarios[t,]$supply_daily*tmp_pop_prop[[2]])
         }
         
