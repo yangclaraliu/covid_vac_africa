@@ -118,8 +118,8 @@ p_table %>%
   summarise(LL = min(value),
             UL = max(value)) %>% 
   mutate(name = factor(name, labels = ROS_labels)) %>% 
-  ggplot(., aes(x = date, group = name, color = name, fill = name)) +
-  geom_ribbon(aes(ymin = LL, ymax = UL), alpha = 0.1) +
+  ggplot(., aes(x = date, group = name, fill = name)) +
+  geom_ribbon(aes(ymin = LL, ymax = UL), color = NA, alpha = 0.3) +
   ggsci::scale_fill_lancet()+
   ggsci::scale_color_lancet() +
   theme_bw() +
@@ -143,9 +143,7 @@ p +
   scale_x_continuous(breaks = c(ymd("2020-01-01"), 
                                 ymd("2021-01-01"),
                                 ymd("2022-01-01")),
-                     labels = c(2020, 2021, 2022))
-
-  
+                     labels = c(2020, 2021, 2022)) 
 
 ggsave("figs/advo_fig2_facet.pdf", width = 15, height = 5)
 
@@ -157,7 +155,7 @@ p_table %>%
             UL = max(value)) %>% 
   filter(name == "no_vac") %>% 
   ggplot(., aes(x = date)) +
-  geom_ribbon(aes(ymin = LL, ymax = UL), alpha = 0.5, color = "black") +
+  geom_ribbon(aes(ymin = LL, ymax = UL), alpha = 0.5, color = NA) +
   theme_bw() +
   theme(axis.text = element_text(size = 12),
         legend.text = element_text(size = 12),

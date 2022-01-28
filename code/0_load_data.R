@@ -123,9 +123,12 @@ nb[[44]] <- grep("Mozambique",
                  shape$NAME_ENGL)
 
 #### our world in data ####
-###### epi data ####
-# owid_epi <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv")
+###
+### epi data ####
 # #
+
+# owid_epi <- read_csv(url("https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-data.csv?raw=true"))
+# 
 # owid_epi[,"location"] %>% distinct() %>%
 #   mutate(iso3c = countrycode(location, "country.name", "iso3c")) %>%
 #   filter(!is.na(iso3c)) %>%
