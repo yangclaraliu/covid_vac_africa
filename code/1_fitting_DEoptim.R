@@ -56,9 +56,11 @@ tmp_vac %>%
   mutate(fw_UL = date_min - ymd("2019-12-01"),
          fw_LL = fw_UL - 90,
          fw_UL = as.numeric(fw_UL),
-         fw_LL = as.numeric(fw_LL)) -> stop_fitting
+         fw_LL = as.numeric(fw_LL)) %>% 
+  arrange(loc) %>% 
+  rownames_to_column(var = "index")-> stop_fitting
 
-stop_fitting$loc[15] <- "Dem. Republic of the Congo"
+stop_fitting[stop_fitting$iso3c=="COD", "loc"] <- "Dem. Republic of the Congo"
 
 fit_func <- function(input){
   tmp_epi <- tmp %>% 
@@ -161,32 +163,28 @@ controlDE <- list(reltol=1e-8, steptol=20, itermax = 400, trace = 10,
                   parallelType = 2)
 
 fitted_params <- list()
-fit_country <- function(m){
- index <- m
- print(stop_fitting$loc[index])
- DEoptim(fn = fit_func,
-         # lower = c(1, stop_fitting$fw_LL[index], 0.01),
-         # upper = c(5, stop_fitting$fw_UL[index], 1),
-         lower = c(1, 0, 0.01),
-         upper = c(5, 396, 1),
-         control = controlDE) -> out
- 
- input_tmp <- fitted_params[[index]] <- out$optim$bestmem
- 
- p_tmp <- draw_fit(input_tmp,
-                   index)
- 
- write_rds(file = "data/intermediate/fitted_parameters.rds", 
-           x = fitted_params)
- 
- fn_tmp <- paste0("figs/intermediate/fitting_20220126/",
-                  stop_fitting$loc[index],
-                  ".png")
- ggsave(fn_tmp, p_tmp)
- print(index)
- rm(index, out)
- }
+for(index in 1:nrow(stop_fitting)){
+  print(stop_fitting$loc[index])
+  DEoptim(fn = fit_func,
+          # lower = c(1, stop_fitting$fw_LL[index], 0.01),
+          # upper = c(5, stop_fitting$fw_UL[index], 1),
+          lower = c(1, 0, 0.01),
+          upper = c(5, 396, 1),
+          control = controlDE) -> out
+  
+  input_tmp <- fitted_params[[index]] <- out$optim$bestmem
+  
+  p_tmp <- draw_fit(input_tmp,
+                    index)
+  
+  write_rds(file = "data/intermediate/fitted_parameters.rds", 
+            x = fitted_params)
+  
+  fn_tmp <- paste0("figs/intermediate/fitting_20220126/",
+                   stop_fitting$index[index],"_",stop_fitting$loc[index],
+                   ".png")
+  ggsave(fn_tmp, p_tmp)
+  rm(index, out, input_tmp)  
+}
 
-x <- 13:nrow(stop_fitting)
-x <- x[x!=15]
-for(j in 1:nrow(stop_fitting)) {fit_country(j)}
+ 
