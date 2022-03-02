@@ -92,63 +92,215 @@ update_vac_char <- function(para,
   return(para)
 }
 
+# change_VOC <- function(
+#   para = NULL,
+#   date_switch = "2021-03-15",
+#   rc_severity = NULL, # relative change in ihr and ifr
+#   rc_transmissibility = NULL, # relative change in transmissibility via 
+#   # u, uv and uv2
+#   rc_ve = NULL # relative in ve against infection
+# ){
+# 
+#   burden_processes_new <- 
+#     list(cm_multinom_process("E",       data.frame(death_voc = P.death*rc_severity),                   delays = data.frame(death_voc = delay_2death), report = "o"),
+#          cm_multinom_process("Ev",      data.frame(death_voc = P.death*(1-ve$ve_mort[1])*rc_severity), delays = data.frame(death_voc = delay_2death), report = "o"),
+#          cm_multinom_process("Ev2",     data.frame(death_voc = P.death*(1-ve$ve_mort[2])*rc_severity), delays = data.frame(death_voc = delay_2death), report = "o"),
+#          
+#          cm_multinom_process("E",       data.frame(to_hosp_voc = P.hosp*rc_severity),                  delays = data.frame(to_hosp_voc = delay_2severe)),
+#          cm_multinom_process("Ev",      data.frame(to_hosp_voc = P.hosp*(1-ve$ve_h[1])*rc_severity),   delays = data.frame(to_hosp_voc = delay_2severe)),
+#          cm_multinom_process("Ev2",     data.frame(to_hosp_voc = P.hosp*(1-ve$ve_h[2])*rc_severity),   delays = data.frame(to_hosp_voc = delay_2severe)),
+#          
+#          cm_multinom_process("to_hosp_voc", data.frame(hosp_voc = rep(1,16)),                          delays = data.frame(hosp_voc = delay_2hosp),   report = "ip"))
+#   
+#   burden_updated <- c(burden_processes, burden_processes_new)
+#   para$processes <- burden_updated
+#   
+#   
+#   # make changes RE: transmissibility and ve
+#   if(!(rc_transmissibility == 1 & rc_ve == 1)){
+#     data.table(u   =  para$pop[[1]]$u,
+#                uv  =  para$pop[[1]]$uv,
+#                uv2 =  para$pop[[1]]$uv2) %>% 
+#       mutate(ve_i  =  1 - uv/u,
+#              ve_i2 =  1 - uv2/u) -> u_table
+#     
+#     # change transmissibility
+#     if(rc_transmissibility != 1){
+#       u_table_voc <- 
+#       u_table %>% mutate_at(vars(starts_with("u")), function(x) x*rc_transmissibility)
+#     }
+#     
+#     # change in infection prevention ve
+#     if(rc_ve != 1){
+#       u_table_voc <- 
+#         u_table_voc %>% 
+#         mutate_at(vars(starts_with("ve")), function(x) x*rc_ve) %>% 
+#         mutate(uv = u*(1-ve_i),
+#                uv2 = u*(1-ve_i2))
+#     }
+#     
+#     for(p in c("u","uv","uv2")){
+#       para$schedule[[paste0("change_", p)]] <-  list(
+#         parameter = p,
+#         pops = numeric(),
+#         mode = "assign",
+#         values = list(u_table %>% pull(p), u_table_voc %>% pull(p)),
+#         times = c(para$date0, date_switch)
+#       )
+#     }
+#   }
+#   return(para)
+# }
+
 change_VOC <- function(
   para = NULL,
-  date_switch = "2021-03-15",
-  rc_severity = NULL, # relative change in ihr and ifr
-  rc_transmissibility = NULL, # relative change in transmissibility via 
+  date_switch = c("2021-01-15", "2021-04-15", "2021-12-15"),
+  rc_severity = c(1, 1.5,1.5), # relative change in ihr and ifr
+  rc_transmissibility = c(1, 1.5, 0.5), # relative change in transmissibility via 
   # u, uv and uv2
-  rc_ve = NULL # relative in ve against infection
+  rc_ve = c(1, 0.5, 0.5) # relative in ve against infection
 ){
-
+  
   burden_processes_new <- 
-    list(cm_multinom_process("E",       data.frame(death_voc = P.death*rc_severity),                   delays = data.frame(death_voc = delay_2death), report = "o"),
-         cm_multinom_process("Ev",      data.frame(death_voc = P.death*(1-ve$ve_mort[1])*rc_severity), delays = data.frame(death_voc = delay_2death), report = "o"),
-         cm_multinom_process("Ev2",     data.frame(death_voc = P.death*(1-ve$ve_mort[2])*rc_severity), delays = data.frame(death_voc = delay_2death), report = "o"),
+    list(cm_multinom_process("E",       
+                             data.frame(death_voc1 = P.death*rc_severity[1]),                   
+                             delays = data.frame(death_voc = delay_2death), 
+                             report = "o"),
+         cm_multinom_process("E",       
+                             data.frame(death_voc2 = P.death*prod(rc_severity[1:2])),                   
+                             delays = data.frame(death_voc = delay_2death), 
+                             report = "o"),
+         cm_multinom_process("E",       
+                             data.frame(death_voc3 = P.death*prod(rc_severity[1:3])),                   
+                             delays = data.frame(death_voc = delay_2death), 
+                             report = "o"),
          
-         cm_multinom_process("E",       data.frame(to_hosp_voc = P.hosp*rc_severity),                  delays = data.frame(to_hosp_voc = delay_2severe)),
-         cm_multinom_process("Ev",      data.frame(to_hosp_voc = P.hosp*(1-ve$ve_h[1])*rc_severity),   delays = data.frame(to_hosp_voc = delay_2severe)),
-         cm_multinom_process("Ev2",     data.frame(to_hosp_voc = P.hosp*(1-ve$ve_h[2])*rc_severity),   delays = data.frame(to_hosp_voc = delay_2severe)),
+         cm_multinom_process("Ev",      
+                             data.frame(death_voc1 = P.death*(1-ve$ve_mort[1])*(rc_severity[1])), 
+                             delays = data.frame(death_voc = delay_2death), 
+                             report = "o"),
+         cm_multinom_process("Ev",      
+                             data.frame(death_voc2 = P.death*(1-ve$ve_mort[1])*prod(rc_severity[1:2])), 
+                             delays = data.frame(death_voc = delay_2death), 
+                             report = "o"),
+         cm_multinom_process("Ev",      
+                             data.frame(death_voc3 = P.death*(1-ve$ve_mort[1])*prod(rc_severity[1:3])), 
+                             delays = data.frame(death_voc = delay_2death), 
+                             report = "o"),
          
-         cm_multinom_process("to_hosp_voc", data.frame(hosp_voc = rep(1,16)),                          delays = data.frame(hosp_voc = delay_2hosp),   report = "ip"))
+         cm_multinom_process("Ev2",     
+                             data.frame(death_voc1 = P.death*(1-ve$ve_mort[2])*(rc_severity[1])), 
+                             delays = data.frame(death_voc = delay_2death), 
+                             report = "o"),
+         cm_multinom_process("Ev2",     
+                             data.frame(death_voc2 = P.death*(1-ve$ve_mort[2])*prod(rc_severity[1:2])), 
+                             delays = data.frame(death_voc = delay_2death),
+                             report = "o"),
+         cm_multinom_process("Ev2",
+                             data.frame(death_voc3 = P.death*(1-ve$ve_mort[2])*prod(rc_severity[1:3])), 
+                             delays = data.frame(death_voc = delay_2death), 
+                             report = "o"),
+         
+         cm_multinom_process("E",       
+                             data.frame(to_hosp_voc1 = P.hosp*(rc_severity[1])),                  
+                             delays = data.frame(to_hosp_voc = delay_2severe)),
+         cm_multinom_process("E",       
+                             data.frame(to_hosp_voc2 = P.hosp*prod(rc_severity[1:2])),                  
+                             delays = data.frame(to_hosp_voc = delay_2severe)),
+         cm_multinom_process("E",       
+                             data.frame(to_hosp_voc3 = P.hosp*prod(rc_severity[1:3])),                  
+                             delays = data.frame(to_hosp_voc = delay_2severe)),
+         
+         cm_multinom_process("Ev",      
+                             data.frame(to_hosp_voc1 = P.hosp*(1-ve$ve_h[1])*(rc_severity[1])),   
+                             delays = data.frame(to_hosp_voc = delay_2severe)),
+         cm_multinom_process("Ev",      
+                             data.frame(to_hosp_voc2 = P.hosp*(1-ve$ve_h[1])*prod(rc_severity[1:2])),   
+                             delays = data.frame(to_hosp_voc = delay_2severe)),
+         cm_multinom_process("Ev",      
+                             data.frame(to_hosp_voc3 = P.hosp*(1-ve$ve_h[1])*prod(rc_severity[1:3])),   
+                             delays = data.frame(to_hosp_voc = delay_2severe)),
+         
+         cm_multinom_process("Ev2",     
+                             data.frame(to_hosp_voc1 = P.hosp*(1-ve$ve_h[2])*(rc_severity[1])),   
+                             delays = data.frame(to_hosp_voc = delay_2severe)),
+         cm_multinom_process("Ev2",     
+                             data.frame(to_hosp_voc2 = P.hosp*(1-ve$ve_h[2])*prod(rc_severity[1:2])),   
+                             delays = data.frame(to_hosp_voc = delay_2severe)),
+         cm_multinom_process("Ev2",     
+                             data.frame(to_hosp_voc2 = P.hosp*(1-ve$ve_h[2])*prod(rc_severity[1:3])),   
+                             delays = data.frame(to_hosp_voc = delay_2severe)),
+         
+         cm_multinom_process("to_hosp_voc1", data.frame(hosp_voc1 = rep(1,16)),                          
+                             delays = data.frame(hosp_voc = delay_2hosp),   report = "ip"),
+         cm_multinom_process("to_hosp_voc2", data.frame(hosp_voc2 = rep(1,16)),                          
+                             delays = data.frame(hosp_voc = delay_2hosp),   report = "ip"),
+         cm_multinom_process("to_hosp_voc3", data.frame(hosp_voc3 = rep(1,16)),                          
+                             delays = data.frame(hosp_voc = delay_2hosp),   report = "ip")
+    )
+  
+  
   
   burden_updated <- c(burden_processes, burden_processes_new)
   para$processes <- burden_updated
   
   
   # make changes RE: transmissibility and ve
-  if(!(rc_transmissibility == 1 & rc_ve == 1)){
-    data.table(u   =  para$pop[[1]]$u,
-               uv  =  para$pop[[1]]$uv,
-               uv2 =  para$pop[[1]]$uv2) %>% 
-      mutate(ve_i  =  1 - uv/u,
-             ve_i2 =  1 - uv2/u) -> u_table
-    
-    # change transmissibility
-    if(rc_transmissibility != 1){
-      u_table_voc <- 
-      u_table %>% mutate_at(vars(starts_with("u")), function(x) x*rc_transmissibility)
-    }
-    
-    # change in infection prevention ve
-    if(rc_ve != 1){
-      u_table_voc <- 
-        u_table_voc %>% 
-        mutate_at(vars(starts_with("ve")), function(x) x*rc_ve) %>% 
-        mutate(uv = u*(1-ve_i),
-               uv2 = u*(1-ve_i2))
-    }
-    
-    for(p in c("u","uv","uv2")){
-      para$schedule[[paste0("change_", p)]] <-  list(
-        parameter = p,
-        pops = numeric(),
-        mode = "assign",
-        values = list(u_table %>% pull(p), u_table_voc %>% pull(p)),
-        times = c(para$date0, date_switch)
-      )
-    }
-  }
+  data.table(u   =  para$pop[[1]]$u,
+             uv  =  para$pop[[1]]$uv,
+             uv2 =  para$pop[[1]]$uv2
+  ) %>% 
+    mutate(ve_i  =  1 - uv/u,
+           ve_i2 =  1 - uv2/u) %>%
+    mutate(u_voc1 = u*rc_transmissibility[1],
+           u_voc2 = u*prod(rc_transmissibility[1:2]),
+           u_voc3 = u*prod(rc_transmissibility[1:3])) %>% 
+    mutate(ve_i_voc1 = ve_i*rc_ve[1],
+           ve_i_voc2 = ve_i*prod(rc_ve[1:2]),
+           ve_i_voc3 = ve_i*prod(rc_ve[1:3]),
+           ve_i2_voc1 = ve_i2*rc_ve[1],
+           ve_i2_voc2 = ve_i2*prod(rc_ve[1:2]),
+           ve_i2_voc3 = ve_i2*prod(rc_ve[1:3])) %>% 
+    mutate(uv_voc1 = u_voc1*(1-ve_i_voc1),
+           uv_voc2 = u_voc2*(1-ve_i_voc2),
+           uv_voc3 = u_voc3*(1-ve_i_voc3),
+           uv2_voc1 = u_voc1*(1-ve_i2_voc1),
+           uv2_voc2 = u_voc2*(1-ve_i2_voc2),
+           uv2_voc3 = u_voc3*(1-ve_i2_voc3)) -> u_table
+  
+  para$schedule[[paste0("change_u")]] <-  list(
+    parameter = "u",
+    pops = numeric(),
+    mode = "assign",
+    values = list(u_table %>% pull(u), 
+                  u_table %>% pull(u_voc1),
+                  u_table %>% pull(u_voc2),
+                  u_table %>% pull(u_voc3)),
+    times = c(para$date0, date_switch)
+  )
+  
+  para$schedule[[paste0("change_uv")]] <-  list(
+    parameter = "uv",
+    pops = numeric(),
+    mode = "assign",
+    values = list(u_table %>% pull(uv), 
+                  u_table %>% pull(uv_voc1),
+                  u_table %>% pull(uv_voc2),
+                  u_table %>% pull(uv_voc3)),
+    times = c(para$date0, date_switch)
+  )
+  
+  para$schedule[[paste0("change_uv2")]] <-  list(
+    parameter = "uv2",
+    pops = numeric(),
+    mode = "assign",
+    values = list(u_table %>% pull(uv2), 
+                  u_table %>% pull(uv2_voc1),
+                  u_table %>% pull(uv2_voc2),
+                  u_table %>% pull(uv2_voc3)),
+    times = c(para$date0, date_switch)
+  )
+  
   return(para)
 }
 
@@ -165,7 +317,7 @@ vac_policy <- function(para,
                        # prioritisation, assume 60+  all prioritised
                        priority = c(NA, NA, NA, NA,
                                     2,  2,  2,  2,
-                                  2,  2,  2,  2,
+                                    2,  2,  2,  2,
                                     1,  1,  1,  1),
                        # maximum feasible uptakes
                        cov_max = c(rep(0,2),
@@ -1031,6 +1183,14 @@ cm_multinom_process <- function(
   )
 }
 
+draw_supply <- function(start_vac = "2021-01-01",
+                        r_vac = c(275, 826, 2066)/(1000000*2)){
+  ms_date_tmp <- lubridate::ymd(c(start_vac, "2022-12-31"))
+  ms_cov_tmp <- data.frame(ms_cov =
+                           abs(as.numeric(ms_date_tmp[2] - ms_date_tmp[1]))*r_vac) %>% 
+    mutate(speed = speed_labels, 
+           start_vac = start_vac)
 
+  }
 
 

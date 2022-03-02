@@ -154,7 +154,7 @@ owid_epi <- qread("data/epi.qs")
 #   filter(!is.na(iso3c),
 #          iso3c %in% members_complete$iso3c) %>%
 #   left_join(owid_vac, by = "location") -> owid_vac
-# 
+
 # unique(owid_vac$iso3c) %>% length
 # 
 # qsave(owid_vac, "data/owid_vac.qs")
@@ -215,3 +215,5 @@ ROS <- data.frame(ms0 = c(0,0, 0, 0),
                                             "2022-12-31")) %>% 
            ymd)
 
+
+speed_labels <- c("slow", "medium", "fast")
