@@ -1151,16 +1151,6 @@ vac_policy <- function(para,
               scenarios = scenarios))
   }
 
-
-##### expand VE estimates to meet the needs of the model ####
-exp_ve <- function(ve_d_o,  # disease blocking VE observed
-                   ve_i_o   # infection blocking VE assumed
-){
-  # calculate of clinical fraction reduction
-  ve_d <- (ve_d_o - ve_i_o)/(1 - ve_i_o)
-  return(ve_d)
-}
-
 cm_multinom_process <- function(
   src, outcomes, delays,
   report = ""

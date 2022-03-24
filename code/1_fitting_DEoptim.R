@@ -205,3 +205,5 @@ for(index in 2:nrow(stop_fitting)){
   rm(index, out, input_tmp)
 }
 
+draw_fit(read_rds("data/intermediate/fitted_parameters_4.rds") %>% .[[1]], 1)
+

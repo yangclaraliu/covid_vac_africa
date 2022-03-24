@@ -1,3 +1,12 @@
+##### expand VE estimates to meet the needs of the model ####
+exp_ve <- function(ve_d_o,  # disease blocking VE observed
+                   ve_i_o   # infection blocking VE assumed
+){
+  # calculate of clinical fraction reduction
+  ve_d <- (ve_d_o - ve_i_o)/(1 - ve_i_o)
+  return(ve_d)
+}
+
 # vaccine efficacy tested
 data.table(ve_i_o = c(0.7, 0.85),
            ve_d_o = c(0.7, 0.89)) %>% 
