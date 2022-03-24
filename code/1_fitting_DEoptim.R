@@ -1,6 +1,6 @@
 require(DEoptim)
 
-VOC_start <- "2021-06-15"
+# VOC_start <- "2021-06-15"
 
 CJ(date = seq(range(owid_epi$date)[1],
               range(owid_epi$date)[2],
@@ -58,15 +58,18 @@ tmp_vac %>%
          fw_UL = as.numeric(fw_UL),
          fw_LL = as.numeric(fw_LL)) %>% 
   arrange(loc) %>% 
-  rownames_to_column(var = "index")-> stop_fitting
+  rownames_to_column(var = "index") %>% 
+  mutate(vocw_LL = as.numeric(ymd("2021-01-16")-date_min),
+         vocw_UL = as.numeric(ymd("2021-07-15")-date_min))-> stop_fitting
 
 stop_fitting[stop_fitting$iso3c=="COD", "loc"] <- "Dem. Republic of the Congo"
 
 fit_func <- function(input){
+  
   tmp_epi <- tmp %>% 
     filter(iso3c == stop_fitting$iso3c[index]) %>% 
     ungroup %>% 
-    dplyr::select(date, deaths) %>% 
+    dplyr::select(date, deaths, iso3c) %>% 
     mutate(date = as.character(date))
 
   suppressWarnings(
@@ -84,10 +87,14 @@ fit_func <- function(input){
                       v2e_d  = ve$ve_d[2],    # clinical fraction among breakthrough post 2 doses
                       wv = 1/360) %>% 
       change_VOC(.,
-                 date_switch = VOC_start,
-                 rc_severity = 1.5,
-                 rc_transmissibility = 1.5,
-                 rc_ve = 0.4) %>% 
+                 date_switch = c("2021-01-15", 
+                                 as.character(ymd(stop_fitting$date_min[index]) + input[4]), 
+                                 "2021-12-15"),
+                 rc_severity = c(1, 1.5, 1), # relative change in ihr and ifr
+                 rc_transmissibility = c(1, 1.5, 1), # relative change in transmissibility via 
+                 # u, uv and uv2
+                 rc_ve = c(1, 0.8, 1) # relative in ve against infection
+                 ) %>% 
       cm_simulate() %>% 
       .[["dynamics"]] %>% 
       filter(grepl("death", compartment)) %>% 
@@ -97,7 +104,10 @@ fit_func <- function(input){
       filter(date <= stop_fitting$t_start[index]) %>%
       pivot_wider(names_from = compartment,
                   values_from = value) %>% 
-      mutate(deaths_sim = if_else(date <= ymd(VOC_start), death_o, death_voc_o),
+      mutate(deaths_sim = case_when(date <= "2021-01-15" ~ death_o,
+                                    date > "2021-01-15" & date <= (ymd(stop_fitting$date_min[index]) + input[4]) ~ death_voc1_o,
+                                    date > (ymd(stop_fitting$date_min[index]) + input[4]) & date <= "2021-12-15" ~ death_voc2_o,
+                                    date > "2021-12-15" ~ death_voc3_o),
              scaled = deaths_sim*as.numeric(input[3]),
              date = as.character(date)) %>% 
       left_join(tmp_epi, 
@@ -127,10 +137,14 @@ draw_fit <- function(opt, index){
                       v2e_d  = ve$ve_d[2],    # clinical fraction among breakthrough post 2 doses
                       wv = 1/360) %>% 
       change_VOC(.,
-                 date_switch = VOC_start,
-                 rc_severity = 1.5,
-                 rc_transmissibility = 1.5,
-                 rc_ve = 0.4) %>% 
+                 date_switch = c("2021-01-15", 
+                                 as.character(ymd(stop_fitting$date_min[index]) + opt[4]), 
+                                 "2021-12-15"),
+                 rc_severity = c(1, 1.5, 1), # relative change in ihr and ifr
+                 rc_transmissibility = c(1, 1.5, 1), # relative change in transmissibility via 
+                 # u, uv and uv2
+                 rc_ve = c(1, 0.8, 1) # relative in ve against infection
+                 ) %>% 
       cm_simulate() %>% 
       .[["dynamics"]] %>% 
       filter(grepl("death", compartment)) %>% 
@@ -139,7 +153,10 @@ draw_fit <- function(opt, index){
       mutate(date = ymd("2019-12-01") + opt[2] + t) %>% 
       filter(date <= stop_fitting$t_start[index]) %>%
       pivot_wider(names_from = compartment, values_from = value) %>% 
-      mutate(deaths_sim = if_else(date <= ymd(VOC_start), death_o, death_voc_o),
+      mutate(deaths_sim = case_when(date <= "2021-01-15" ~ death_o,
+                                    date > "2021-01-15" & date <= (ymd(stop_fitting$date_min[index]) + opt[4]) ~ death_voc1_o,
+                                    date > (ymd(stop_fitting$date_min[index]) + opt[4]) & date <= "2021-12-15" ~ death_voc2_o,
+                                    date > "2021-12-15" ~ death_voc3_o),
              scaled = deaths_sim*as.numeric(opt[3]),
              date = as.character(date)) %>% 
       left_join(tmp %>% 
@@ -163,28 +180,28 @@ controlDE <- list(reltol=1e-8, steptol=20, itermax = 400, trace = 10,
                   parallelType = 2)
 
 fitted_params <- list()
-for(index in 1:nrow(stop_fitting)){
+for(index in 2:nrow(stop_fitting)){
   print(stop_fitting$loc[index])
   DEoptim(fn = fit_func,
           # lower = c(1, stop_fitting$fw_LL[index], 0.01),
           # upper = c(5, stop_fitting$fw_UL[index], 1),
-          lower = c(1, 0, 0.01),
-          upper = c(5, 396, 1),
+          lower = c(1, 0, 0.01, stop_fitting$vocw_LL[index]),
+          upper = c(5, 396, 1, stop_fitting$vocw_UL[index]),
           control = controlDE) -> out
-  
+
   input_tmp <- fitted_params[[index]] <- out$optim$bestmem
-  
+
   p_tmp <- draw_fit(input_tmp,
                     index)
-  
-  write_rds(file = "data/intermediate/fitted_parameters.rds", 
+
+  write_rds(file = "data/intermediate/fitted_parameters_4.rds",
             x = fitted_params)
-  
-  fn_tmp <- paste0("figs/intermediate/fitting_20220126/",
+
+  fn_tmp <- paste0("figs/intermediate/fitting_20220313/",
                    stop_fitting$index[index],"_",stop_fitting$loc[index],
                    ".png")
+  
   ggsave(fn_tmp, p_tmp)
-  rm(index, out, input_tmp)  
+  rm(index, out, input_tmp)
 }
 
- 

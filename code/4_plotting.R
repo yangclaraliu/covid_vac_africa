@@ -70,9 +70,34 @@ owid_vac %>%
   theme_cowplot() +
   ggsci::scale_fill_material("red") +
   guides(fill = F) +
-  labs(size = "Population Size (million)", x = "2021\nFirst Day with Proportion of Population\n Fully Covered by Vaccine Exceed 1%", y = "Doses Administered/ Million-Day") +
-  theme(legend.position = "top")
+  labs(size = "Population Size (million)", x = "First Day with Proportion of Population\n Fully Covered by Vaccine Exceed 1%", y = "Doses Administered/ Million-Day") +
+  theme(legend.position = "top") +
+  lims(x = c(ymd("2021-01-01", "2021-12-31")))
 
 ggsave("figs/AfHEA/vac_rate.png",
        width = 6, height = 6)
+
+##### healthcare cost viz ####
+shape %>% 
+  left_join(cost_health_unit %>% 
+              mutate(ISO3_CODE = countrycode(Country, "country.name", "iso3c")), by = c("ISO3_CODE")) %>% 
+  mutate(case_management_critical = as.numeric(`...13`),
+         case_management_hosp = as.numeric(`...12`),
+         case_management_home = as.numeric(`...11`))  -> tmp
+
+tmp %>% 
+  dplyr::select(ISO3_CODE, NAME_ENGL,
+                case_management_critical, case_management_hosp,
+                case_management_home) %>% 
+  filter(ISO3_CODE == "SYC") %>% 
+  st_as_sf %>% 
+  ggplot(., aes(fill = case_management_critical)) +
+  geom_sf() +
+  # theme_map() +
+  ggsci::scale_fill_material(palette = "amber") +
+  theme(legend.position = "top",
+        legend.key.width = unit(1, 'cm')) +
+  labs(fill = "Case Management: Critical Care")# +facet_wrap(~NAME_ENGL   , scales = "fixed")
+
+ggsave("figs/AfHEA/cost_case_critical.png")
 

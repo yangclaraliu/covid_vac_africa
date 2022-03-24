@@ -29,14 +29,28 @@ delay_2severe <- cm_delay_gamma(8.5, 5, 60, 0.25)$p
 delay_2hosp <- cm_delay_gamma(14.6, 5, 60, 0.25)$p
 
 burden_processes <- list(
-  cm_multinom_process("E",       data.frame(death = P.death),                   delays = data.frame(death = delay_2death), report = "o"),
-  cm_multinom_process("Ev",      data.frame(death = P.death*(1-ve$ve_mort[1])), delays = data.frame(death = delay_2death), report = "o"),
-  cm_multinom_process("Ev2",     data.frame(death = P.death*(1-ve$ve_mort[2])), delays = data.frame(death = delay_2death), report = "o"),
+  cm_multinom_process("E",       
+                      data.frame(death = P.death),                   
+                      delays = data.frame(death = delay_2death), report = "o"),
+  cm_multinom_process("Ev",      
+                      data.frame(death = P.death*(1-ve$ve_d[1])*(1-ve$ve_cfr[1])), 
+                      delays = data.frame(death = delay_2death), report = "o"),
+  cm_multinom_process("Ev2",     
+                      data.frame(death = P.death*(1-ve$ve_d[2])*(1-ve$ve_cfr[2])), 
+                      delays = data.frame(death = delay_2death), report = "o"),
   
   
-  cm_multinom_process("E",       data.frame(to_hosp = P.hosp),                  delays = data.frame(to_hosp = delay_2severe)),
-  cm_multinom_process("Ev",      data.frame(to_hosp = P.hosp*(1-ve$ve_h[1])),   delays = data.frame(to_hosp = delay_2severe)),
-  cm_multinom_process("Ev2",     data.frame(to_hosp = P.hosp*(1-ve$ve_h[2])),   delays = data.frame(to_hosp = delay_2severe)),
+  cm_multinom_process("E",       
+                      data.frame(to_hosp = P.hosp),                  
+                      delays = data.frame(to_hosp = delay_2severe)),
+  cm_multinom_process("Ev",      
+                      data.frame(to_hosp = P.hosp*(1-ve$ve_d[1])*(1-ve$ve_scr[1])),   
+                      delays = data.frame(to_hosp = delay_2severe)),
+  cm_multinom_process("Ev2",     
+                      data.frame(to_hosp = P.hosp*(1-ve$ve_d[2])*(1-ve$ve_scr[2])),   
+                      delays = data.frame(to_hosp = delay_2severe)),
   
-  cm_multinom_process("to_hosp", data.frame(hosp = rep(1,16)),                  delays = data.frame(hosp = delay_2hosp),   report = "ip")
+  cm_multinom_process("to_hosp", 
+                      data.frame(hosp = rep(1,16)),                  
+                      delays = data.frame(hosp = delay_2hosp),   report = "ip")
 )

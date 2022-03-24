@@ -1,6 +1,12 @@
 require(pacman)
 p_load(tidyverse, sf, data.table, countrycode, mgcv,
-       magrittr, testthat)
+       magrittr, testthat, ISOcodes)
+
+path_dropbox <- "C:/Users/eideyliu/Dropbox/Github_Data/COVID-19_africa_cdc/"
+
+cost_health_unit <- readxl::read_xlsx(paste0(path_dropbox, "COVID care unit cost - Africa.xlsx")) %>% 
+  .[5:nrow(.),]
+
 
 ##### load covidm #####
 cm_path <- "code/covidm_for_fitting/"
@@ -181,6 +187,12 @@ source("code/0_4_Vac_Char.R")
 #### load health system parameters ####
 source("code/0_3_HealthSystem.R")
 
+#### load health econ related functions and data ####
+source("code/0_5_HE.R")
+
+#### load costs tables ####
+source("code/0_6_costs.R")
+
 #### load epidemic parameters ####
 ###### Clinical Fraction ####
 # (based on Davies et al, Nature paper) 
@@ -217,3 +229,21 @@ ROS <- data.frame(ms0 = c(0,0, 0, 0),
 
 
 speed_labels <- c("slow", "medium", "fast")
+
+scientific_10 <- function(x){
+  scales::scientific_format()(x) %>%
+    sub(pattern = "e\\+",
+        x = .,
+        replacement = "e") %>%
+    sub(pattern = "e00", 
+        x = ., 
+        replacement = "") %>%
+    gsub(pattern = "e",
+         replacement = " %*% 10^",
+         x = .) %>%
+    sub(pattern = "1 %*% ",
+        replacement = "",
+        x = ., fixed = T) %>%
+    parse(text = .)
+}
+
