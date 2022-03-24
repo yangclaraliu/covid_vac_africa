@@ -38,5 +38,4 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-code/covidm_for_fitting
 /data/
