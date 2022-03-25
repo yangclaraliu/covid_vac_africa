@@ -53,7 +53,7 @@ gen_country_basics <- function(country,
     para$pop[[i]]$seed_times <- c(1:14)
   }
   
-  para$processes = burden_processes
+  para$processes = processes
   
   para$schedule[["mobility"]] = list(
     parameter = "contact",
@@ -158,90 +158,119 @@ change_VOC <- function(
   rc_severity = c(1, 1.5,1.5), # relative change in ihr and ifr
   rc_transmissibility = c(1, 1.5, 0.5), # relative change in transmissibility via 
   # u, uv and uv2
+  VE = NULL,
   rc_ve = c(1, 0.5, 0.5) # relative in ve against infection
 ){
   
   burden_processes_new <- 
-    list(cm_multinom_process("E",       
-                             data.frame(death_voc1 = P.death*rc_severity[1]),                   
-                             delays = data.frame(death_voc = delay_2death), 
-                             report = "o"),
-         cm_multinom_process("E",       
-                             data.frame(death_voc2 = P.death*prod(rc_severity[1:2])),                   
-                             delays = data.frame(death_voc = delay_2death), 
-                             report = "o"),
-         cm_multinom_process("E",       
-                             data.frame(death_voc3 = P.death*prod(rc_severity[1:3])),                   
-                             delays = data.frame(death_voc = delay_2death), 
-                             report = "o"),
-         
-         cm_multinom_process("Ev",      
-                             data.frame(death_voc1 = P.death*(1-ve$ve_mort[1])*(rc_severity[1])), 
-                             delays = data.frame(death_voc = delay_2death), 
-                             report = "o"),
-         cm_multinom_process("Ev",      
-                             data.frame(death_voc2 = P.death*(1-ve$ve_mort[1])*prod(rc_severity[1:2])), 
-                             delays = data.frame(death_voc = delay_2death), 
-                             report = "o"),
-         cm_multinom_process("Ev",      
-                             data.frame(death_voc3 = P.death*(1-ve$ve_mort[1])*prod(rc_severity[1:3])), 
-                             delays = data.frame(death_voc = delay_2death), 
-                             report = "o"),
-         
-         cm_multinom_process("Ev2",     
-                             data.frame(death_voc1 = P.death*(1-ve$ve_mort[2])*(rc_severity[1])), 
-                             delays = data.frame(death_voc = delay_2death), 
-                             report = "o"),
-         cm_multinom_process("Ev2",     
-                             data.frame(death_voc2 = P.death*(1-ve$ve_mort[2])*prod(rc_severity[1:2])), 
-                             delays = data.frame(death_voc = delay_2death),
-                             report = "o"),
-         cm_multinom_process("Ev2",
-                             data.frame(death_voc3 = P.death*(1-ve$ve_mort[2])*prod(rc_severity[1:3])), 
-                             delays = data.frame(death_voc = delay_2death), 
-                             report = "o"),
-         
-         cm_multinom_process("E",       
-                             data.frame(to_hosp_voc1 = P.hosp*(rc_severity[1])),                  
-                             delays = data.frame(to_hosp_voc = delay_2severe)),
-         cm_multinom_process("E",       
-                             data.frame(to_hosp_voc2 = P.hosp*prod(rc_severity[1:2])),                  
-                             delays = data.frame(to_hosp_voc = delay_2severe)),
-         cm_multinom_process("E",       
-                             data.frame(to_hosp_voc3 = P.hosp*prod(rc_severity[1:3])),                  
-                             delays = data.frame(to_hosp_voc = delay_2severe)),
-         
-         cm_multinom_process("Ev",      
-                             data.frame(to_hosp_voc1 = P.hosp*(1-ve$ve_h[1])*(rc_severity[1])),   
-                             delays = data.frame(to_hosp_voc = delay_2severe)),
-         cm_multinom_process("Ev",      
-                             data.frame(to_hosp_voc2 = P.hosp*(1-ve$ve_h[1])*prod(rc_severity[1:2])),   
-                             delays = data.frame(to_hosp_voc = delay_2severe)),
-         cm_multinom_process("Ev",      
-                             data.frame(to_hosp_voc3 = P.hosp*(1-ve$ve_h[1])*prod(rc_severity[1:3])),   
-                             delays = data.frame(to_hosp_voc = delay_2severe)),
-         
-         cm_multinom_process("Ev2",     
-                             data.frame(to_hosp_voc1 = P.hosp*(1-ve$ve_h[2])*(rc_severity[1])),   
-                             delays = data.frame(to_hosp_voc = delay_2severe)),
-         cm_multinom_process("Ev2",     
-                             data.frame(to_hosp_voc2 = P.hosp*(1-ve$ve_h[2])*prod(rc_severity[1:2])),   
-                             delays = data.frame(to_hosp_voc = delay_2severe)),
-         cm_multinom_process("Ev2",     
-                             data.frame(to_hosp_voc2 = P.hosp*(1-ve$ve_h[2])*prod(rc_severity[1:3])),   
-                             delays = data.frame(to_hosp_voc = delay_2severe)),
-         
-         cm_multinom_process("to_hosp_voc1", data.frame(hosp_voc1 = rep(1,16)),                          
-                             delays = data.frame(hosp_voc = delay_2hosp),   report = "ip"),
-         cm_multinom_process("to_hosp_voc2", data.frame(hosp_voc2 = rep(1,16)),                          
-                             delays = data.frame(hosp_voc = delay_2hosp),   report = "ip"),
-         cm_multinom_process("to_hosp_voc3", data.frame(hosp_voc3 = rep(1,16)),                          
-                             delays = data.frame(hosp_voc = delay_2hosp),   report = "ip")
+    # mortality cases
+    list(
+      cm_multinom_process("E",       
+                          data.frame(death_voc1 = P.death*rc_severity[1]),                   
+                          delays = data.frame(death_voc1 = delay_2death), 
+                          report = "o"),
+      cm_multinom_process("E",       
+                          data.frame(death_voc2 = P.death*prod(rc_severity[1:2])),                   
+                          delays = data.frame(death_voc2 = delay_2death), 
+                          report = "o"),
+      cm_multinom_process("E",       
+                          data.frame(death_voc3 = P.death*prod(rc_severity[1:3])),                   
+                          delays = data.frame(death_voc3 = delay_2death), 
+                          report = "o"),
+      
+      cm_multinom_process("Ev",      
+                          data.frame(death_voc1 = P.death*(1-VE$ve_d[1])*(1-VE$ve_mort_condition[1])*(rc_severity[1])), 
+                          delays = data.frame(death_voc1 = delay_2death), 
+                          report = "o"),
+      cm_multinom_process("Ev",      
+                          data.frame(death_voc2 = P.death*(1-VE$ve_d[1])*(1-VE$ve_mort_condition[1])*prod(rc_severity[1:2])), 
+                          delays = data.frame(death_voc2 = delay_2death), 
+                          report = "o"),
+      cm_multinom_process("Ev",      
+                          data.frame(death_voc3 = P.death*(1-VE$ve_d[1])*(1-VE$ve_mort_condition[1])*prod(rc_severity[1:3])), 
+                          delays = data.frame(death_voc3 = delay_2death), 
+                          report = "o"),
+      
+      cm_multinom_process("Ev2",     
+                          data.frame(death_voc1 = P.death*(1-VE$ve_d[2])*(1-VE$ve_mort_condition[2])*(rc_severity[1])), 
+                          delays = data.frame(death_voc1 = delay_2death), 
+                          report = "o"),
+      cm_multinom_process("Ev2",     
+                          data.frame(death_voc2 = P.death*(1-VE$ve_d[2])*(1-VE$ve_mort_condition[2])*prod(rc_severity[1:2])), 
+                          delays = data.frame(death_voc2 = delay_2death),
+                          report = "o"),
+      cm_multinom_process("Ev2",
+                          data.frame(death_voc3 = P.death*(1-VE$ve_d[2])*(1-VE$ve_mort_condition[2])*prod(rc_severity[1:3])), 
+                          delays = data.frame(death_voc3 = delay_2death), 
+                          report = "o"),
+      
+      # severe cases
+      cm_multinom_process("E",       
+                          data.frame(to_severe_voc1 = P.severe*(rc_severity[1]),
+                                     to_critical_voc1 = P.critical*(rc_severity[1])),                  
+                          delays = data.frame(to_severe_voc1 = delay_2severe,
+                                              to_critical_voc1 = delay_2severe)),
+      cm_multinom_process("E",       
+                          data.frame(to_severe_voc2 = P.severe*prod(rc_severity[1:2]),
+                                     to_critical_voc2 = P.critical*prod(rc_severity[1:2])),                  
+                          delays = data.frame(to_severe_voc2 = delay_2severe,
+                                              to_critical_voc2 = delay_2severe)),
+      cm_multinom_process("E",       
+                          data.frame(to_severe_voc3 = P.severe*prod(rc_severity[1:3]),
+                                     to_critical_voc3 = P.critical*prod(rc_severity[1:3])),                  
+                          delays = data.frame(to_severe_voc3 = delay_2severe,
+                                              to_critical_voc3 = delay_2severe)),
+      
+      cm_multinom_process("Ev",      
+                          data.frame(to_severe_voc1 = P.severe*(1-VE$ve_d[1])*(1-VE$ve_h_condition[1])*(rc_severity[1]),
+                                     to_critical_voc1 = P.critical*(1-VE$ve_d[1])*(1-VE$ve_icu_condition[1])*(rc_severity[1])),   
+                          delays = data.frame(to_severe_voc1 = delay_2severe,
+                                              to_critical_voc1 = delay_2severe)),
+      cm_multinom_process("Ev",      
+                          data.frame(to_severe_voc2 = P.severe*(1-VE$ve_d[1])*(1-VE$ve_h_condition[1])*prod(rc_severity[1:2]),
+                                     to_critical_voc2 = P.critical*(1-VE$ve_d[1])*(1-VE$ve_icu_condition[1])*prod(rc_severity[1:2])),   
+                          delays = data.frame(to_severe_voc2 = delay_2severe,
+                                              to_critical_voc2 = delay_2severe)),
+      cm_multinom_process("Ev",      
+                          data.frame(to_severe_voc3 = P.severe*(1-VE$ve_d[1])*(1-VE$ve_h_condition[1])*prod(rc_severity[1:3]),
+                                     to_critical_voc3 = P.critical*(1-VE$ve_d[1])*(1-VE$ve_icu_condition[1])*prod(rc_severity[1:3])),   
+                          delays = data.frame(to_severe_voc3 = delay_2severe,
+                                              to_critical_voc3 = delay_2severe)),
+      
+      cm_multinom_process("Ev2",     
+                          data.frame(to_severe_voc1 = P.severe*(1-VE$ve_d[2])*(1-VE$ve_h_condition[2])*(rc_severity[1]),
+                                     to_critical_voc1 = P.critical*(1-VE$ve_d[2])*(1-VE$ve_icu_condition[2])*(rc_severity[1])),   
+                          delays = data.frame(to_severe_voc1 = delay_2severe,
+                                              to_critical_voc1 = delay_2severe)),
+      cm_multinom_process("Ev2",     
+                          data.frame(to_severe_voc2 = P.severe*(1-VE$ve_d[2])*(1-VE$ve_h_condition[2])*prod(rc_severity[1:2]),
+                                     to_critical_voc2 = P.critical*(1-VE$ve_d[2])*(1-VE$ve_icu_condition[2])*prod(rc_severity[1:2])),   
+                          delays = data.frame(to_severe_voc2 = delay_2severe,
+                                              to_critical_voc2 = delay_2severe)),
+      cm_multinom_process("Ev2",     
+                          data.frame(to_severe_voc3 = P.severe*(1-VE$ve_d[2])*(1-VE$ve_h_condition[2])*prod(rc_severity[1:3]),
+                                     to_critical_voc3 = P.critical*(1-VE$ve_d[2])*(1-VE$ve_icu_condition[2])*prod(rc_severity[1:3])),   
+                          delays = data.frame(to_severe_voc3 = delay_2severe,
+                                              to_critical_voc3 = delay_2severe)),
+      
+      cm_multinom_process("to_severe_voc1", data.frame(severe_voc1 = rep(1,16)),                          
+                          delays = data.frame(severe_voc1 = delay_2hosp),   report = "ip"),
+      cm_multinom_process("to_severe_voc2", data.frame(severe_voc2 = rep(1,16)),                          
+                          delays = data.frame(severe_voc2 = delay_2hosp),   report = "ip"),
+      cm_multinom_process("to_severe_voc3", data.frame(severe_voc3 = rep(1,16)),                          
+                          delays = data.frame(severe_voc3 = delay_2hosp),   report = "ip"),
+      
+      cm_multinom_process("to_critical_voc1", data.frame(critical_voc1 = rep(1,16)),                          
+                          delays = data.frame(critical_voc1 = delay_2hosp_icu),   report = "ip"),
+      cm_multinom_process("to_critical_voc2", data.frame(critical_voc2 = rep(1,16)),                          
+                          delays = data.frame(critical_voc2 = delay_2hosp_icu),   report = "ip"),
+      cm_multinom_process("to_critical_voc3", data.frame(critical_voc3 = rep(1,16)),                          
+                          delays = data.frame(critical_voc3 = delay_2hosp_icu),   report = "ip")
     )
   
   
   
-  burden_updated <- c(burden_processes, burden_processes_new)
+  burden_updated <- c(para$processes, burden_processes_new)
   para$processes <- burden_updated
   
   
@@ -1173,14 +1202,14 @@ cm_multinom_process <- function(
   )
 }
 
-draw_supply <- function(start_vac = "2021-01-01",
-                        r_vac = c(275, 826, 2066)/(1000000*2)){
-  ms_date_tmp <- lubridate::ymd(c(start_vac, "2022-12-31"))
-  ms_cov_tmp <- data.frame(ms_cov =
-                           abs(as.numeric(ms_date_tmp[2] - ms_date_tmp[1]))*r_vac) %>% 
-    mutate(speed = speed_labels, 
-           start_vac = start_vac)
-
-  }
+# draw_supply <- function(start_vac = "2021-01-01",
+#                         r_vac = c(275, 826, 2066)/(1000000*2)){
+#   ms_date_tmp <- lubridate::ymd(c(start_vac, "2022-12-31"))
+#   ms_cov_tmp <- data.frame(ms_cov =
+#                            abs(as.numeric(ms_date_tmp[2] - ms_date_tmp[1]))*r_vac) %>% 
+#     mutate(speed = speed_labels, 
+#            start_vac = start_vac)
+# 
+#   }
 
 

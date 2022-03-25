@@ -1,6 +1,6 @@
 require(pacman)
 p_load(tidyverse, sf, data.table, countrycode, mgcv,
-       magrittr, testthat, ISOcodes)
+       magrittr, testthat, ISOcodes, cowplot, ggsci)
 
 path_dropbox <- "C:/Users/eideyliu/Dropbox/Github_Data/COVID-19_africa_cdc/"
 
@@ -247,3 +247,6 @@ scientific_10 <- function(x){
     parse(text = .)
 }
 
+# fitted_table <- read_rds("data/intermediate/fitted_table.rds")
+source("code/1_fitting_check.R")
+source("code/0_7_define_vac_rate.R")

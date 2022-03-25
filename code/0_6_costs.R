@@ -7,8 +7,13 @@ readxl::read_excel(paste0(path_dropbox,
                                       "Africa Vaccine Cost 16_03_22.xlsx"),
                                sheet = "Scenarios - Description") %>% 
               mutate(Scenario = as.character(Scenario)),
-            by = "Scenario") -> cost_vaccines
+            by = "Scenario") %>% 
+  rename(iso3c = `Country Code`)-> cost_vaccines
 
+model_cost_vaccines <- lm(value ~ iso3c + Type + Elapse + Rate, 
+                          data = cost_vaccines)
+summary(model_cost_vaccines)
+# plot(model)
 
 
 readxl::read_excel(paste0(path_dropbox,
