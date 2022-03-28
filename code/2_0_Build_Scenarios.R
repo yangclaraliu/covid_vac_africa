@@ -1,81 +1,130 @@
 #### base parameters ####
-params_step1 <- list()
-
-for(i in 1){
-  params_step1[[i]] <- 
-  gen_country_basics(country = fitted_table$loc[i],
-                     waning_nat = 52*7*3,
-                     R0_assumed  = fitted_table$r[i],
-                     date_start = as.character(ymd("2019-12-01") + fitted_table$t0[i]),
-                     date_end = "2022-12-31",
-                     processes = burden_processes_pfizer,
-                     deterministic = TRUE) %>%
-    update_vac_char(.,
-                    ve_i   = ve_pfizer$ve_i_o[1],  # infection blocking VE post 1 dose
-                    v2e_i  = ve_pfizer$ve_i_o[2],  # infection blocking VE post 2 doses
-                    ve_d   = ve_pfizer$ve_d[1],    # clinical fraction among breakthrough post 1 dose
-                    v2e_d  = ve_pfizer$ve_d[2],    # clinical fraction among breakthrough post 2 doses
-                    wv = 1/360) %>% 
-    change_VOC(., 
-               date_switch = c(fitted_table$t_intro_voc1[i], 
-                               fitted_table$t_intro_voc2[i], 
-                               fitted_table$t_intro_voc3[i]) %>% 
-                 as.character,
-               rc_severity = c(fitted_table$rc_severity_1[i], 
-                               fitted_table$rc_severity_2[i],
-                               fitted_table$rc_severity_3[i]), 
-               rc_transmissibility = c(fitted_table$rc_transmissibility_1[i], 
-                                       fitted_table$rc_transmissibility_2[i], 
-                                       fitted_table$rc_transmissibility_3[i]), 
-               rc_ve = c(fitted_table$rc_ve_1[i], 
-                         fitted_table$rc_ve_2[i], 
-                         fitted_table$rc_ve_3[i]),
-               VE = ve_pfizer) 
-
+build_base <- function(brand = NULL,
+                       sim_end = "2022-12-31"){
+  
+  tmp <- list()
+  
+  if(brand == "pfizer")  {
+    ve_tmp <- ve_pfizer
+    processes_tmp <- burden_processes_pfizer
+  }
+  
+  if(brand == "az")  {
+    ve_tmp <- ve_az
+    processes_tmp <- burden_processes_az
+  }
+  
+  for(i in 1:nrow(fitted_table)){
+    tmp[[i]] <- 
+      gen_country_basics(country = fitted_table$loc[i],
+                         waning_nat = 52*7*3,
+                         R0_assumed  = fitted_table$r[i],
+                         date_start = as.character(ymd("2019-12-01") + fitted_table$t0[i]),
+                         date_end = sim_end,
+                         processes = processes_tmp,
+                         deterministic = TRUE) %>%
+      update_vac_char(.,
+                      ve_i   = ve_tmp$ve_i_o[1],  # infection blocking VE post 1 dose
+                      v2e_i  = ve_tmp$ve_i_o[2],  # infection blocking VE post 2 doses
+                      ve_d   = ve_tmp$ve_d[1],    # clinical fraction among breakthrough post 1 dose
+                      v2e_d  = ve_tmp$ve_d[2],    # clinical fraction among breakthrough post 2 doses
+                      wv = 1/360) %>% 
+      change_VOC(., 
+                 date_switch = c(fitted_table$t_intro_voc1[i], 
+                                 fitted_table$t_intro_voc2[i], 
+                                 fitted_table$t_intro_voc3[i]) %>% 
+                   as.character,
+                 rc_severity = c(fitted_table$rc_severity_1[i], 
+                                 fitted_table$rc_severity_2[i],
+                                 fitted_table$rc_severity_3[i]), 
+                 rc_transmissibility = c(fitted_table$rc_transmissibility_1[i], 
+                                         fitted_table$rc_transmissibility_2[i], 
+                                         fitted_table$rc_transmissibility_3[i]), 
+                 rc_ve = c(fitted_table$rc_ve_1[i], 
+                           fitted_table$rc_ve_2[i], 
+                           fitted_table$rc_ve_3[i]),
+                 VE = ve_tmp) 
+    
+  }
+  return(tmp)
 }
 
-cm_simulate(params_step1[[1]]) -> res
+base <- list()
+base[["pfizer"]] <- build_base("pfizer")
+base[["az"]] <- build_base("az")
+base[["pfizer_ext"]] <- build_base("pfizer", sim_end = "2023-06-30")
+base[["az_ext"]] <- build_base("az", sim_end = "2023-06-30")
 
-res$dynamics %>% 
-  ggplot(., aes(x = t, y = value, group = group)) +
-  geom_line() +
-  facet_wrap(~compartment, scales = "free")
+compile_base <- function(param_set){
+  param_set %>% map(cm_simulate) %>% map(~.[["dynamics"]]) %>% 
+    setNames(fitted_table$t0) %>% 
+    bind_rows(.id = "t0") %>% 
+    mutate(t0 = as.numeric(t0),
+           date = ymd("2019-12-01") + t + t0) %>% 
+    filter(grepl("case|critical|severe|death", compartment)) %>% 
+    pivot_wider(names_from = compartment,
+                values_from = value) %>% 
+    left_join(fitted_table %>% 
+                mutate_at(vars(starts_with("t_intro_voc")), ymd), 
+              by = c("population" = "loc")) %>% 
+    mutate(severe_p_all = case_when(
+      date <= t_intro_voc1 ~ severe_p,
+      date > t_intro_voc1 & date <= t_intro_voc2 ~ severe_voc1_p,
+      date > t_intro_voc2 & date <= t_intro_voc3 ~ severe_voc2_p,
+      date > t_intro_voc3 ~ severe_voc3_p
+    ),
+    severe_i_all = case_when(
+      date <= t_intro_voc1 ~ severe_i,
+      date > t_intro_voc1 & date <= t_intro_voc2 ~ severe_voc1_i,
+      date > t_intro_voc2 & date <= t_intro_voc3 ~ severe_voc2_i,
+      date > t_intro_voc3 ~ severe_voc3_i
+    ),
+    
+    critical_p_all = case_when(
+      date <= t_intro_voc1 ~ critical_p,
+      date > t_intro_voc1 & date <= t_intro_voc2 ~ critical_voc1_p,
+      date > t_intro_voc2 & date <= t_intro_voc3 ~ critical_voc2_p,
+      date > t_intro_voc3 ~ critical_voc3_p
+    ),
+    critical_i_all = case_when(
+      date <= t_intro_voc1 ~ critical_i,
+      date > t_intro_voc1 & date <= t_intro_voc2 ~ critical_voc1_i,
+      date > t_intro_voc2 & date <= t_intro_voc3 ~ critical_voc2_i,
+      date > t_intro_voc3 ~ critical_voc3_i
+    ),
+    
+    death_o_all = case_when(
+      date <= t_intro_voc1 ~ death_o,
+      date > t_intro_voc1 & date <= t_intro_voc2 ~ death_voc1_o,
+      date > t_intro_voc2 & date <= t_intro_voc3 ~ death_voc2_o,
+      date > t_intro_voc3 ~ death_voc3_o
+    )) %>% 
+    dplyr::select(population, iso3c, date, group, cases, severe_p_all, severe_i_all, critical_p_all, critical_i_all, death_o_all) %>% 
+    pivot_longer(cols = c(cases, severe_p_all, severe_i_all, critical_p_all, critical_i_all, death_o_all)) %>% 
+    mutate(is_death = name == "death_o_all",
+           year = year(date)) %>% 
+    group_by(is_death) %>% group_split() -> tmp
+  
+  res_tmp <- list()
+  
+  res_tmp[[1]] <- tmp[[1]] %>% 
+    group_by(population, iso3c, year, name) %>% 
+    summarise(value = sum(value))
+  
+  res_tmp[[2]] <- tmp[[2]] %>% 
+    group_by(population, year, name, group) %>% 
+    summarise(novac = sum(value))
+  
+  return(res_tmp)
+}
 
+res_novac <- list()
+res_novac[["pfizer"]] <- compile_base(base$pfizer)
+res_novac[["az"]] <- compile_base(base$az)
+res_novac[["pfizer_ext"]] <- compile_base(base$pfizer_ext)
+res_novac[["az_ext"]] <- compile_base(base$az_ext)
 
-
-# params_step1_ext <- list()
-# 
-# for(i in 1:nrow(fitted_table)){
-#   params_step1_ext[[i]] <- 
-#     gen_country_basics(country = fitted_table$loc[i],
-#                        waning_nat = 52*7*3,
-#                        R0_assumed  = fitted_table$r[i],
-#                        date_start = as.character(ymd("2019-12-01") + fitted_table$t0[i]),
-#                        date_end = "2023-06-30",
-#                        processes = burden_processes,
-#                        deterministic = TRUE) %>%
-#     update_vac_char(.,
-#                     ve_i   = ve$ve_i_o[1],  # infection blocking VE post 1 dose
-#                     v2e_i  = ve$ve_i_o[2],  # infection blocking VE post 2 doses
-#                     ve_d   = ve$ve_d[1],    # clinical fraction among breakthrough post 1 dose
-#                     v2e_d  = ve$ve_d[2],    # clinical fraction among breakthrough post 2 doses
-#                     wv = 1/360) %>% 
-#     change_VOC(., 
-#                date_switch = c(fitted_table$t_intro_voc1[i], 
-#                                fitted_table$t_intro_voc2[i], 
-#                                fitted_table$t_intro_voc3[i]) %>% 
-#                  as.character,
-#                rc_severity = c(fitted_table$rc_severity_1[i], 
-#                                fitted_table$rc_severity_2[i],
-#                                fitted_table$rc_severity_3[i]), 
-#                rc_transmissibility = c(fitted_table$rc_transmissibility_1[i], 
-#                                        fitted_table$rc_transmissibility_2[i], 
-#                                        fitted_table$rc_transmissibility_3[i]), 
-#                rc_ve = c(fitted_table$rc_ve_1[i], 
-#                          fitted_table$rc_ve_2[i], 
-#                          fitted_table$rc_ve_3[i])) 
-#   
-# }
+write_rds(res_novac, "data/intermediate/res_novac.rds")
 
 # res_novac <- list()
 # for(j in 1:length(params_step1)){
@@ -87,96 +136,132 @@ ms_cov_all %>%
   dplyr::select(date_start, scenario, date_vac_end, date_vac_end_ext, cov, cov_ext) %>% 
   distinct() -> ms_scenarios
 
-res <- list()
-
-for(j in 1:length(params_step1)){
-  res[[j]] <- list()
-  date_switch <- c(fitted_table$t_intro_voc1[j],
-                   fitted_table$t_intro_voc2[j],
-                   fitted_table$t_intro_voc3[j])
-  # Jan, May, July, Oct, Dec
-  for(i in 1:nrow(ms_scenarios)){
-    date_tmp <- c(ms_cov_all$date_start[i],
-                  ms_cov_all$date_vac_end[i])
-    if(date_tmp[length(date_tmp)] != "2022-12-31"){
-      date_tmp <- c(date_tmp, "2022-12-31")
-    }
-    
-    cov_tmp <- c(0, ms_cov_all$cov[i])
-    if(length(cov_tmp) < length(date_tmp)){
-      cov_tmp <- c(cov_tmp, 0.6)
-    }
-    
-    vac_policy(params_step1[[j]],
-               # these two parameters define the supply conditions
-               milestone_date = as.character(date_tmp), 
-               milestone_cov = cov_tmp,
-               # prioritisation, assume 60+  all prioritised
-               priority = c(NA, NA, NA, NA,
-                            2,  2,  2,  2,
-                            2,  2,  2,  2,
-                            1,  1,  1,  1),
-               # maximum feasible uptakes
-               cov_max = c(rep(0,4),
-                           rep(0.6, 8),
-                           rep(0.8, 4)),
-               supply_delay = 4, # unit = weeks
-               dose_interval = 4) -> tmp
+compile_strategy <- function(param_set,
+                             sim_end = "2022-12-31",
+                             fn = NULL){
+  df <- list()
+  
+  for(j in 1:nrow(fitted_table)){
+    df[[j]] <- list()
+    date_switch <- c(fitted_table$t_intro_voc1[j],
+                     fitted_table$t_intro_voc2[j],
+                     fitted_table$t_intro_voc3[j])
+    # Jan, May, July, Oct, Dec
+    for(i in 1:nrow(ms_scenarios)){
+      date_tmp <- c(ms_scenarios$date_start[i],
+                    ms_scenarios$date_vac_end[i])
+      if(date_tmp[length(date_tmp)] != sim_end){
+        date_tmp <- c(date_tmp, sim_end)
+      }
       
-    # tmp$scenarios[[1]]$daily_vac_scenarios %>% 
-    #   mutate_at(vars(starts_with("Y")), cumsum) %>% 
-    #   pivot_longer(starts_with("Y")) %>% 
-    #   separate(name, into = c("ag","dose")) %>% 
-    #   ggplot(., aes(x = date, y = value, group = dose, color = dose)) +
-    #   geom_line() +
-    #   facet_wrap(~ag)
-    # 
+      cov_tmp <- c(0, ms_scenarios$cov[i])
+      if(length(cov_tmp) < length(date_tmp)){
+        cov_tmp <- c(cov_tmp, 0.6)
+      }
+      
+      vac_policy(param_set[[j]],
+                 # these two parameters define the supply conditions
+                 milestone_date = as.character(date_tmp), 
+                 milestone_cov = cov_tmp,
+                 # prioritisation, assume 60+  all prioritised
+                 priority = c(NA, NA, NA, NA,
+                              2,  2,  2,  2,
+                              2,  2,  2,  2,
+                              1,  1,  1,  1),
+                 # maximum feasible uptakes
+                 cov_max = c(rep(0,4),
+                             rep(0.6, 8),
+                             rep(0.8, 4)),
+                 supply_delay = 4, # unit = weeks
+                 dose_interval = 4) -> tmp
+      
+      # tmp$scenarios[[1]]$daily_vac_scenarios %>%
+      #   mutate_at(vars(starts_with("Y")), cumsum) %>%
+      #   pivot_longer(starts_with("Y")) %>%
+      #   separate(name, into = c("ag","dose")) %>%
+      #   ggplot(., aes(x = date, y = value, group = dose, color = dose)) +
+      #   geom_line() +
+      #   facet_wrap(~ag)
+      # 
       tmp %>% 
         .$res %>% 
         .[[1]] %>% 
-      cm_simulate %>% 
-      .[["dynamics"]] -> tmp
-        
+        cm_simulate %>% 
+        .[["dynamics"]] -> tmp
       
-      tmp$compartment %>% unique
-      filter(grepl("death|hosp|case", compartment)) %>% 
+      tmp %>% 
+        filter(grepl("death|critical|severe|case", compartment)) %>% 
         mutate(date = ymd("2019-12-01") + t + fitted_table$t0[j],
                year = year(date)) %>% 
-      # summarise(value = sum(value), .groups = "drop") %>%
-      filter((compartment == "death_o") & date <= date_switch[1] |
-               (compartment == "death_voc1_o") & date > date_switch[1] & date <= date_switch[2] |
-               (compartment == "death_voc2_o") & date > date_switch[2] & date <= date_switch[3] |
-               (compartment == "death_voc3_o") & date > date_switch[3] |
-               (compartment == "hosp_i") & date <= date_switch[1] |
-               (compartment == "hosp_voc1_i") & date > date_switch[1] & date <= date_switch[2] |
-               (compartment == "hosp_voc2_i") & date > date_switch[2] & date <= date_switch[3] |
-               (compartment == "hosp_voc3_i") & date > date_switch[3] |
-               compartment == "cases") %>% 
-        mutate(tag = substr(compartment,1,4)) %>% 
-        group_by(tag) %>% group_split() -> res_tmp 
+        # summarise(value = sum(value), .groups = "drop") %>%
+        filter((compartment == "death_o") & date <= date_switch[1] |
+                 (compartment == "death_voc1_o") & date > date_switch[1] & date <= date_switch[2] |
+                 (compartment == "death_voc2_o") & date > date_switch[2] & date <= date_switch[3] |
+                 (compartment == "death_voc3_o") & date > date_switch[3] |
+                 
+                 (compartment == "severe_p") & date <= date_switch[1] |
+                 (compartment == "severe_voc1_p") & date > date_switch[1] & date <= date_switch[2] |
+                 (compartment == "severe_voc2_p") & date > date_switch[2] & date <= date_switch[3] |
+                 (compartment == "severe_voc3_p") & date > date_switch[3] |
+                 
+                 (compartment == "severe_i") & date <= date_switch[1] |
+                 (compartment == "severe_voc1_i") & date > date_switch[1] & date <= date_switch[2] |
+                 (compartment == "severe_voc2_i") & date > date_switch[2] & date <= date_switch[3] |
+                 (compartment == "severe_voc3_i") & date > date_switch[3] |
+                 
+                 (compartment == "critical_p") & date <= date_switch[1] |
+                 (compartment == "critical_voc1_p") & date > date_switch[1] & date <= date_switch[2] |
+                 (compartment == "critical_voc2_p") & date > date_switch[2] & date <= date_switch[3] |
+                 (compartment == "critical_voc3_p") & date > date_switch[3] |
+                 
+                 (compartment == "critical_i") & date <= date_switch[1] |
+                 (compartment == "critical_voc1_i") & date > date_switch[1] & date <= date_switch[2] |
+                 (compartment == "critical_voc2_i") & date > date_switch[2] & date <= date_switch[3] |
+                 (compartment == "critical_voc3_i") & date > date_switch[3] |
+                 compartment == "cases") -> res_tmp 
       
+      res_tmp %>% 
+        pivot_wider(names_from = compartment,
+                    values_from = value) %>% 
+        replace(., is.na(.), 0) %>% 
+        mutate(severe_p_all = severe_p + severe_voc1_p + severe_voc2_p + severe_voc3_p,
+               severe_i_all = severe_i + severe_voc1_i + severe_voc2_i + severe_voc3_i,
+               critical_p_all = critical_p + critical_voc1_p + critical_voc2_p + critical_voc3_p,
+               critical_i_all = critical_i + critical_voc1_i + critical_voc2_i + critical_voc3_i,
+               death_o_all = death_o + death_voc1_o + death_voc2_o + death_voc3_o) %>% 
+        dplyr::select(population, date, group, year, cases, severe_p_all, severe_i_all, critical_p_all, critical_i_all, death_o_all) %>% 
+        pivot_longer(cols = c(cases, severe_p_all, severe_i_all, critical_p_all, critical_i_all, death_o_all)) %>% 
+        mutate(is_death = name == "death_o_all") %>% 
+        group_by(is_death) %>% group_split() -> res_tmp
+      
+      df[[j]][[i]] <- list()
       res_tmp[[1]] %>% 
-        group_by(year, tag, population) %>% 
-        summarise(value = sum(value), .groups = "drop") %>% 
-        mutate(ag = as.character(NA)) -> seg1
+        group_by(population, year, name) %>% 
+        summarise(value = sum(value)) -> df[[j]][[i]][["non_fatal"]]
       
       res_tmp[[2]] %>% 
-        group_by(year, tag, group, population) %>% 
-        summarise(value = sum(value), .groups = "drop") %>% 
-        rename(ag = "group") %>% 
-        mutate(ag = as.character(ag)) -> seg2
+        group_by(population, year, name, group) %>% 
+        summarise(value = sum(value)) -> df[[j]][[i]][["fatal"]]
       
-      res_tmp[[3]] %>% 
-        group_by(year, tag, population) %>% 
-        summarise(value = sum(value), .groups = "drop") %>% 
-        mutate(ag = as.character(NA)) -> seg3
-      
-      bind_rows(seg1,seg2,seg3) -> res[[j]][[i]]
-    
-    print(paste0(fitted_table$iso3c[j], ", ", i))
+      print(paste0(fitted_table$iso3c[j], ", ", i))
+    }
+    write_rds(df, paste0("data/intermediate/", fn, ".rds"))
   }
-  write_rds(res, "data/intermediate/params_grid.rds")
 }
+
+compile_strategy(base$pfizer, fn = "params_grid_pfizer_v2")
+compile_strategy(base$az, fn = "params_grid_az")
+
+
+
+
+
+
+
+
+
+
+
 
 res %>% 
   map(bind_rows, .id = "ms_cov_index") %>% 

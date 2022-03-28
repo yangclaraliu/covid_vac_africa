@@ -15,12 +15,17 @@ model_cost_vaccines <- lm(value ~ iso3c + Type + Elapse + Rate,
 summary(model_cost_vaccines)
 # plot(model)
 
+cost_vaccines %>% filter(`Country Name` == "Angola")
+
 
 readxl::read_excel(paste0(path_dropbox,
                           "COVID care unit cost - Africa.xlsx"),
                    sheet = 1) %>% 
   .[-c(1:4),c(1,11:14)] %>% 
   setNames(c("cn", "home", "hosp", "icu", "deaths")) -> cost_care
+
+cost_care[cost_care$cn == "Egypt, Arab Rep.","cn"] <- "Egypt"
+cost_care[cost_care$cn == "Congo, Dem. Rep.","cn"] <- "Dem. Republic of the Congo"
 
 paste0(path_dropbox, "API_SH.XPD.CHEX.PC.CD_DS2_en_csv_v2_3753529.csv") %>% 
   readr::read_csv(.) %>% 

@@ -27,7 +27,7 @@ P.hosp <- P.critical + P.severe
 delay_2death <- cm_delay_gamma(26, 5, 60, 0.25)$p
 delay_2severe <- cm_delay_gamma(8.5, 5, 60, 0.25)$p
 delay_2hosp <- cm_delay_gamma(14.6, 5, 60, 0.25)$p
-delay_2hosp_icu <- cm_delay_gamma(15.6, 5, 60, 0.25)$p
+delay_2hosp_critical <- cm_delay_gamma(15.6, 5, 60, 0.25)$p
 
 gen_burden_processes <- function(VE){
   tmp <- list(
@@ -35,10 +35,10 @@ gen_burden_processes <- function(VE){
                         data.frame(death = P.death),                   
                         delays = data.frame(death = delay_2death), report = "o"),
     cm_multinom_process("Ev",      
-                        data.frame(death = P.death*(1-VE$ve_d[1])*(1-VE$ve_mort_condition[1])), 
+                        data.frame(death = P.death*(1-VE$ve_mort_condition[1])), 
                         delays = data.frame(death = delay_2death), report = "o"),
     cm_multinom_process("Ev2",     
-                        data.frame(death = P.death*(1-VE$ve_d[2])*(1-VE$ve_mort_condition[2])), 
+                        data.frame(death = P.death*(1-VE$ve_mort_condition[2])), 
                         delays = data.frame(death = delay_2death), report = "o"),
     
     
@@ -49,14 +49,14 @@ gen_burden_processes <- function(VE){
                                             to_critival = delay_2severe)),
     
     cm_multinom_process("Ev",
-                        data.frame(to_severe = P.severe*(1-VE$ve_d[1])*(1-VE$ve_h_condition[1]),
-                                   to_critical = P.critical*(1-VE$ve_d[1])*(1-VE$ve_icu_condition[1])),
+                        data.frame(to_severe = P.severe*(1-VE$ve_severe_condition[1]),
+                                   to_critical = P.critical*(1-VE$ve_critical_condition[1])),
                         delays = data.frame(to_severe = delay_2severe,
                                             to_critival = delay_2severe)),
     
     cm_multinom_process("Ev2",
-                        data.frame(to_severe = P.severe*(1-VE$ve_d[2])*(1-VE$ve_h_condition[2]),
-                                   to_critical = P.critical*(1-VE$ve_d[2])*(1-VE$ve_icu_condition[2])),
+                        data.frame(to_severe = P.severe*(1-VE$ve_severe_condition[2]),
+                                   to_critical = P.critical*(1-VE$ve_critical_condition[2])),
                         delays = data.frame(to_severe = delay_2severe,
                                             to_critival = delay_2severe)),
     
@@ -66,7 +66,7 @@ gen_burden_processes <- function(VE){
     
     cm_multinom_process("to_critical", 
                         data.frame(critical = rep(1,16)),                  
-                        delays = data.frame(critical = delay_2hosp_icu),   report = "ip")
+                        delays = data.frame(critical = delay_2hosp_critical),   report = "ip")
     )
     return(tmp)
 }

@@ -305,7 +305,7 @@ cov_econ_outcomes <- function(
   ]
   
   # merge dLE data and calculated ylls, vsl and hc 
-  first_year <- min(epi_deaths$year) # reference year for discounting
+  first_year <- 2021 # min(epi_deaths$year) # reference year for discounting
   ylls <- dLE[   
     ylls, 
     on = .(country = country, AgeBand = age), 
@@ -325,7 +325,7 @@ cov_econ_outcomes <- function(
   
   # ylds based on number of cases / hospitalizations
   unit_ylds <- cov_unit_ylds()
-  first_year <- min(epi_cases$year)
+  first_year <- 2021
   ylds <- epi_cases[
     ,
     as.list(econ_scens[,c("econ_id","discount_rate")]), #  combine with different econ scenarios
@@ -335,7 +335,7 @@ cov_econ_outcomes <- function(
     .(
       ylds = sum(
         (
-          (cases     * unit_ylds$per_case) +
+            (cases     * unit_ylds$per_case) +
             (non_icu  * unit_ylds$per_non_icu_case) +
             (icu      * unit_ylds$per_icu_case)
         ) * 1 / (1 + discount_rate)^(year - first_year) # discounting
@@ -368,25 +368,25 @@ econ_scens <- as.data.table(cbind(
 ))
 
 # deaths
-# epi_deaths <- as.data.table(expand.grid(
-#   epi_id = c(1,2),
-#   country = c("ETH","COG","GHA","NGA","ZAF"),
-#   year = c(2020,2021),
-#   age  = seq(1,16,1)   #CovidM age groups
-# ))
-# epi_deaths[, deaths := round(10^6 * ifr_levin(age * 5))]
-# epi_deaths <- epi_deaths[order(epi_id, country, age, year)]
+epi_deaths <- as.data.table(expand.grid(
+  epi_id = c(1,2),
+  country = c("ETH","COG","GHA","NGA","ZAF"),
+  year = c(2020,2021),
+  age  = seq(1,16,1)   #CovidM age groups
+))
+epi_deaths[, deaths := round(10^6 * ifr_levin(age * 5))]
+epi_deaths <- epi_deaths[order(epi_id, country, age, year)]
 
 # cases, non_icu, icu
-# epi_cases <- as.data.table(expand.grid(
-#   epi_id = c(1,2),
-#   country = c("ETH","COG","GHA","NGA","ZAF"),
-#   year = c(2020,2021)
-# ))
-# epi_cases[, cases := 10^6]
-# epi_cases[, non_icu := round(cases * 0.1 * 0.7)]
-# epi_cases[, icu := round(cases * 0.1 * 0.3)]
-# epi_cases <- epi_cases[order(epi_id, country, year)]
+epi_cases <- as.data.table(expand.grid(
+  epi_id = c(1,2),
+  country = c("ETH","COG","GHA","NGA","ZAF"),
+  year = c(2020,2021)
+))
+epi_cases[, cases := 10^6]
+epi_cases[, non_icu := round(cases * 0.1 * 0.7)]
+epi_cases[, icu := round(cases * 0.1 * 0.3)]
+epi_cases <- epi_cases[order(epi_id, country, year)]
 
 # load UN population and life tables sourced from https://population.un.org/wpp/Download/Standard/CSV/
 UNLT  <- fread(paste0(path_dropbox,
@@ -410,13 +410,13 @@ GDPPC <- fread(
 
 
 # call function to calculate DALYs and VSL
-# results <- cov_econ_outcomes(
-#   epi_deaths = epi_deaths,
-#   epi_cases = epi_cases,
-#   econ_scens = econ_scens, 
-#   LT = UNLT, 
-#   POP = UNPOP,
-#   GDPPC = GDPPC,
-#   GNIPC = GNIPC
-# )
+results <- cov_econ_outcomes(
+  epi_deaths = epi_deaths,
+  epi_cases = epi_cases,
+  econ_scens = econ_scens,
+  LT = UNLT,
+  POP = UNPOP,
+  GDPPC = GDPPC,
+  GNIPC = GNIPC
+)
 

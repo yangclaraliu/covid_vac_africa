@@ -179,28 +179,28 @@ change_VOC <- function(
                           report = "o"),
       
       cm_multinom_process("Ev",      
-                          data.frame(death_voc1 = P.death*(1-VE$ve_d[1])*(1-VE$ve_mort_condition[1])*(rc_severity[1])), 
+                          data.frame(death_voc1 = P.death*(1-VE$ve_mort_condition[1])*(rc_severity[1])), 
                           delays = data.frame(death_voc1 = delay_2death), 
                           report = "o"),
       cm_multinom_process("Ev",      
-                          data.frame(death_voc2 = P.death*(1-VE$ve_d[1])*(1-VE$ve_mort_condition[1])*prod(rc_severity[1:2])), 
+                          data.frame(death_voc2 = P.death*(1-VE$ve_mort_condition[1])*prod(rc_severity[1:2])), 
                           delays = data.frame(death_voc2 = delay_2death), 
                           report = "o"),
       cm_multinom_process("Ev",      
-                          data.frame(death_voc3 = P.death*(1-VE$ve_d[1])*(1-VE$ve_mort_condition[1])*prod(rc_severity[1:3])), 
+                          data.frame(death_voc3 = P.death*(1-VE$ve_mort_condition[1])*prod(rc_severity[1:3])), 
                           delays = data.frame(death_voc3 = delay_2death), 
                           report = "o"),
       
       cm_multinom_process("Ev2",     
-                          data.frame(death_voc1 = P.death*(1-VE$ve_d[2])*(1-VE$ve_mort_condition[2])*(rc_severity[1])), 
+                          data.frame(death_voc1 = P.death*(1-VE$ve_mort_condition[2])*(rc_severity[1])), 
                           delays = data.frame(death_voc1 = delay_2death), 
                           report = "o"),
       cm_multinom_process("Ev2",     
-                          data.frame(death_voc2 = P.death*(1-VE$ve_d[2])*(1-VE$ve_mort_condition[2])*prod(rc_severity[1:2])), 
+                          data.frame(death_voc2 = P.death*(1-VE$ve_mort_condition[2])*prod(rc_severity[1:2])), 
                           delays = data.frame(death_voc2 = delay_2death),
                           report = "o"),
       cm_multinom_process("Ev2",
-                          data.frame(death_voc3 = P.death*(1-VE$ve_d[2])*(1-VE$ve_mort_condition[2])*prod(rc_severity[1:3])), 
+                          data.frame(death_voc3 = P.death*(1-VE$ve_mort_condition[2])*prod(rc_severity[1:3])), 
                           delays = data.frame(death_voc3 = delay_2death), 
                           report = "o"),
       
@@ -222,34 +222,34 @@ change_VOC <- function(
                                               to_critical_voc3 = delay_2severe)),
       
       cm_multinom_process("Ev",      
-                          data.frame(to_severe_voc1 = P.severe*(1-VE$ve_d[1])*(1-VE$ve_h_condition[1])*(rc_severity[1]),
-                                     to_critical_voc1 = P.critical*(1-VE$ve_d[1])*(1-VE$ve_icu_condition[1])*(rc_severity[1])),   
+                          data.frame(to_severe_voc1 = P.severe*(1-VE$ve_severe_condition[1])*(rc_severity[1]),
+                                     to_critical_voc1 = P.critical*(1-VE$ve_critical_condition[1])*(rc_severity[1])),   
                           delays = data.frame(to_severe_voc1 = delay_2severe,
                                               to_critical_voc1 = delay_2severe)),
       cm_multinom_process("Ev",      
-                          data.frame(to_severe_voc2 = P.severe*(1-VE$ve_d[1])*(1-VE$ve_h_condition[1])*prod(rc_severity[1:2]),
-                                     to_critical_voc2 = P.critical*(1-VE$ve_d[1])*(1-VE$ve_icu_condition[1])*prod(rc_severity[1:2])),   
+                          data.frame(to_severe_voc2 = P.severe*(1-VE$ve_severe_condition[1])*prod(rc_severity[1:2]),
+                                     to_critical_voc2 = P.critical*(1-VE$ve_critical_condition[1])*prod(rc_severity[1:2])),   
                           delays = data.frame(to_severe_voc2 = delay_2severe,
                                               to_critical_voc2 = delay_2severe)),
       cm_multinom_process("Ev",      
-                          data.frame(to_severe_voc3 = P.severe*(1-VE$ve_d[1])*(1-VE$ve_h_condition[1])*prod(rc_severity[1:3]),
-                                     to_critical_voc3 = P.critical*(1-VE$ve_d[1])*(1-VE$ve_icu_condition[1])*prod(rc_severity[1:3])),   
+                          data.frame(to_severe_voc3 = P.severe*(1-VE$ve_severe_condition[1])*prod(rc_severity[1:3]),
+                                     to_critical_voc3 = P.critical*(1-VE$ve_critical_condition[1])*prod(rc_severity[1:3])),   
                           delays = data.frame(to_severe_voc3 = delay_2severe,
                                               to_critical_voc3 = delay_2severe)),
       
       cm_multinom_process("Ev2",     
-                          data.frame(to_severe_voc1 = P.severe*(1-VE$ve_d[2])*(1-VE$ve_h_condition[2])*(rc_severity[1]),
-                                     to_critical_voc1 = P.critical*(1-VE$ve_d[2])*(1-VE$ve_icu_condition[2])*(rc_severity[1])),   
+                          data.frame(to_severe_voc1 = P.severe*(1-VE$ve_severe_condition[2])*(rc_severity[1]),
+                                     to_critical_voc1 = P.critical*(1-VE$ve_critical_condition[2])*(rc_severity[1])),   
                           delays = data.frame(to_severe_voc1 = delay_2severe,
                                               to_critical_voc1 = delay_2severe)),
       cm_multinom_process("Ev2",     
-                          data.frame(to_severe_voc2 = P.severe*(1-VE$ve_d[2])*(1-VE$ve_h_condition[2])*prod(rc_severity[1:2]),
-                                     to_critical_voc2 = P.critical*(1-VE$ve_d[2])*(1-VE$ve_icu_condition[2])*prod(rc_severity[1:2])),   
+                          data.frame(to_severe_voc2 = P.severe*(1-VE$ve_severe_condition[2])*prod(rc_severity[1:2]),
+                                     to_critical_voc2 = P.critical*(1-VE$ve_critical_condition[2])*prod(rc_severity[1:2])),   
                           delays = data.frame(to_severe_voc2 = delay_2severe,
                                               to_critical_voc2 = delay_2severe)),
       cm_multinom_process("Ev2",     
-                          data.frame(to_severe_voc3 = P.severe*(1-VE$ve_d[2])*(1-VE$ve_h_condition[2])*prod(rc_severity[1:3]),
-                                     to_critical_voc3 = P.critical*(1-VE$ve_d[2])*(1-VE$ve_icu_condition[2])*prod(rc_severity[1:3])),   
+                          data.frame(to_severe_voc3 = P.severe*(1-VE$ve_severe_condition[2])*prod(rc_severity[1:3]),
+                                     to_critical_voc3 = P.critical*(1-VE$ve_critical_condition[2])*prod(rc_severity[1:3])),   
                           delays = data.frame(to_severe_voc3 = delay_2severe,
                                               to_critical_voc3 = delay_2severe)),
       
@@ -261,11 +261,11 @@ change_VOC <- function(
                           delays = data.frame(severe_voc3 = delay_2hosp),   report = "ip"),
       
       cm_multinom_process("to_critical_voc1", data.frame(critical_voc1 = rep(1,16)),                          
-                          delays = data.frame(critical_voc1 = delay_2hosp_icu),   report = "ip"),
+                          delays = data.frame(critical_voc1 = delay_2hosp_critical),   report = "ip"),
       cm_multinom_process("to_critical_voc2", data.frame(critical_voc2 = rep(1,16)),                          
-                          delays = data.frame(critical_voc2 = delay_2hosp_icu),   report = "ip"),
+                          delays = data.frame(critical_voc2 = delay_2hosp_critical),   report = "ip"),
       cm_multinom_process("to_critical_voc3", data.frame(critical_voc3 = rep(1,16)),                          
-                          delays = data.frame(critical_voc3 = delay_2hosp_icu),   report = "ip")
+                          delays = data.frame(critical_voc3 = delay_2hosp_critical),   report = "ip")
     )
   
   
@@ -1146,9 +1146,9 @@ vac_policy <- function(para,
   for(i in 1:2){
     vacc_times[[i]] <- list()
     for(j in 1:length(scenarios)){
-      vac_para[[i]][[j]] %>% 
+      (vac_para[[i]][[j]] %>% 
         pull(t) %>% 
-        as.numeric -> vacc_times[[i]][[j]] 
+        as.numeric %>% +14) -> vacc_times[[i]][[j]] 
       vacc_times[[i]][[j]][1] <- 0
     }
   }
