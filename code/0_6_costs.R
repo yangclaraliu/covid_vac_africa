@@ -34,5 +34,5 @@ paste0(path_dropbox, "API_SH.XPD.CHEX.PC.CD_DS2_en_csv_v2_3753529.csv") %>%
   filter(iso3c %in% members$iso3c) %>% 
   dplyr::select(iso3c, `2019`) %>% 
   left_join(vac_denom, by = "iso3c") %>% 
-  mutate(hc_expenditure = tot*1000*`2019`) -> cost_hc_expenditure
+  mutate(hc_expenditure = tot*1000*`2019`*(108.596 / 107.303)) -> cost_hc_expenditure
 

@@ -1,3 +1,22 @@
+#### roll-out scenario ####
+ms_scenarios %>% 
+  dplyr::select(-date_vac_end_ext, -cov_ext) %>% 
+  mutate(sim_end = if_else(date_vac_end < "2022-12-31", "2022-12-31", as.character(NA)),
+         cov_end = if_else(is.na(sim_end), as.numeric(NA), 0.6),
+         scenario = factor(scenario, levels = c("slow", "medium", "fast"))) %>% 
+  ggplot(.) +
+  geom_segment(aes(x = date_start, xend = date_vac_end, y = 0, yend = cov, color = scenario)) + 
+  geom_segment(aes(x = date_vac_end, xend = ymd(sim_end), y = 0.6, yend = 0.6, color = scenario)) +
+  scale_color_futurama() +
+  theme_bw() +
+  labs(x = "Vaccine Roll-out Start Date",
+       y = "Vaccine Coverage Level (two-dose)",
+       color = "") +
+  theme(legend.position = "none")
+ggsave("figs/vac_rate_viz.png", width = 8, height = 8)
+
+
+
 
 
 #### Epidemic History ####

@@ -82,8 +82,8 @@ res$az%>%
   summarise(value = sum(value),
             novac = sum(novac)) %>% 
   filter(!grepl("_p_", name)) %>% 
-  left_join(ms_scenarios %>% 
-              rownames_to_column(var = "scenario_id"),
+  left_join(ms_scenarios, # %>% 
+              # rownames_to_column(var = "scenario_id"),
             by = "scenario_id") %>% 
   mutate(scenario = factor(scenario,
                            levels = c("slow", "medium", "fast"),
@@ -95,7 +95,49 @@ res$az%>%
   #                            levels = as.character(seq(ymd("2021-01-01"),ymd("2021-12-01"),"month")))) %>% 
   ggplot(., aes(group = interaction(date_start, scenario), y = 1-value/novac, x = date_start, color = scenario)) +
   geom_boxplot(outlier.shape = NA) +
-  facet_wrap(~name) +
+  facet_wrap(~name, nrow = 4) +
   theme_bw() +
   # lims(y = c(0, 0.9)) +
-  theme(legend.position = "top")
+  theme(legend.position = "top") +
+  labs(color = "",
+       x = "Vaccine Roll-out Start Date",
+       y = "Relative Reduction") +
+  scale_color_futurama() 
+
+ggsave("figs/epi_outcomes_vertical.png", width = 15, height = 8)
+
+res$az%>% 
+  bind_rows(.id = "outcome_type") %>% 
+  dplyr::select(-iso3c) %>% 
+  group_by(scenario_id, population, name) %>% 
+  summarise(value = sum(value),
+            novac = sum(novac)) %>% 
+  filter(!grepl("_p_", name)) %>% 
+  left_join(ms_scenarios, # %>% 
+            # rownames_to_column(var = "scenario_id"),
+            by = "scenario_id") %>% 
+  mutate(scenario = factor(scenario,
+                           levels = c("slow", "medium", "fast"),
+                           labels = c("Slow", "Medium", "Fast")),
+         name = factor(name,
+                       levels = c("cases", "severe_i_all", "critical_i_all", "death_o_all"),
+                       labels = c("All Cases", "Severe Cases", "Critical Cases", "Deaths"))) %>% 
+  # mutate(date_start = factor(date_start,
+  #                            levels = as.character(seq(ymd("2021-01-01"),ymd("2021-12-01"),"month")))) %>% 
+  ggplot(., aes(y = 1-value/novac, x = date_start, color = scenario)) +
+  geom_boxplot(aes(group = interaction(scenario, date_start)), outlier.shape = NA) +
+  # geom_point() +
+  geom_smooth(aes(fill = scenario)) +
+  # geom_boxplot(outlier.shape = NA) +
+  facet_grid(~name) +
+  
+  theme_bw() +
+  # lims(y = c(0, 0.9)) +
+  theme(legend.position = "top") +
+  labs(color = "",
+       x = "Vaccine Roll-out Start Date",
+       y = "Relative Reduction") +
+  scale_color_futurama() +
+  scale_fill_futurama(guide = "none") 
+
+ggsave("figs/epi_outcomes_horizontal.png", width = 15, height = 8)

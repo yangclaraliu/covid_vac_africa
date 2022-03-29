@@ -406,17 +406,17 @@ GDPPC <- fread(
   paste0(path_dropbox,"API_NY.GDP.PCAP.CD_DS2_en_csv_v2_3731360.csv"), 
   skip = 4, 
   header = T
-)[, .(country = `Country Code`, GDPPC_2020_USD = `2020`)] # select most recent (2020 values)
+)[, .(country = `Country Code`, GDPPC_2020_USD = `2020`)] # select most recen t (2020 values)
 
 
 # call function to calculate DALYs and VSL
-results <- cov_econ_outcomes(
-  epi_deaths = epi_deaths,
-  epi_cases = epi_cases,
-  econ_scens = econ_scens,
-  LT = UNLT,
-  POP = UNPOP,
-  GDPPC = GDPPC,
-  GNIPC = GNIPC
-)
+# results <- cov_econ_outcomes(
+#   epi_deaths = epi_deaths,
+#   epi_cases = epi_cases,
+#   econ_scens = econ_scens,
+#   LT = UNLT,
+#   POP = UNPOP,
+#   GDPPC = GDPPC,
+#   GNIPC = GNIPC
+# )
 

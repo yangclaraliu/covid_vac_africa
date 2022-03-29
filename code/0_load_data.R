@@ -250,3 +250,8 @@ scientific_10 <- function(x){
 # fitted_table <- read_rds("data/intermediate/fitted_table.rds")
 source("code/1_fitting_check.R")
 source("code/0_7_define_vac_rate.R")
+
+custom_theme <- theme(
+  axis.text = element_text(size = 14),
+  axis.title = element_text(size = 16)
+)

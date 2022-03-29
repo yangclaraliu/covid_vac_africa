@@ -16,20 +16,21 @@ tmp %>%
   mutate(nt_speed = ntile(Estimate, 3)) %>% 
   dplyr::select(iso3c, nt_speed, Estimate ) -> tmp_speed
 
-# tmp %>% bind_rows() %>% 
-#   left_join(tmp_speed, by = "iso3c") %>% 
-#   mutate(nt_speed = factor(nt_speed, levels = 1:3, labels = speed_labels)) %>% 
-#   ggplot(., aes(x = date, 
-#                 y = cumulative_doses_per_million/1000000, 
-#                 group = iso3c,
-#                 color = nt_speed)) +
-#   geom_line(alpha = 0.7) +
-#   # facet_wrap(~nt_speed) +
-#   theme_bw() +
-#   theme(legend.position = "none") +
-#   labs(x = "",
-#        y = "Cumulative Doses/Person") +
-#   ggsci::scale_color_futurama()-> p
+tmp %>% bind_rows() %>%
+  left_join(tmp_speed, by = "iso3c") %>%
+  mutate(nt_speed = factor(nt_speed, levels = 1:3, labels = speed_labels)) %>%
+  ggplot(., aes(x = date,
+                y = cumulative_doses_per_million/1000000,
+                group = iso3c,
+                color = nt_speed)) +
+  geom_line(alpha = 0.7) +
+  # facet_wrap(~nt_speed) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  labs(x = "",
+       y = "Cumulative Doses/Person") +
+  ggsci::scale_color_futurama() +
+  custom_theme -> p
 
 # p
 # ggsave("figs/define_speed_AfHEA.png", width = 6, height = 6)
@@ -41,9 +42,9 @@ tmp_speed %>%
 
 # CJ(date = seq(ymd("2021-01-01"), ymd("2022-12-30"), "day"),
 #    nt_speed = speed_labels) %>%
-#   left_join(speed_median, by = "nt_speed") %>% 
+#   left_join(speed_median, by = "nt_speed") %>%
 #   mutate(day_since = as.numeric(date - ymd("2021-01-01")),
-#          cov = day_since * vac_rate_per_million/(10000*2)) %>% 
+#          cov = day_since * vac_rate_per_million/(10000*2)) %>%
 #   # filter(date == "2022-12-30")
 #   ggplot(., aes(x = date, y = cov, group = nt_speed, color = nt_speed)) +
 #   geom_line() +
@@ -105,25 +106,25 @@ ms_cov_all %<>%
          vac_unit_ext = vac_unit_ext)
 
 
-# ms_cov_all <- lapply(1:nrow(ms_date_all), function(x) {draw_supply(start_vac = ms_date_all$date_start[x])}) %>% 
+# ms_cov_all <- lapply(1:nrow(ms_date_all), function(x) {draw_supply(start_vac = ms_date_all$date_start[x])}) %>%
 #   bind_rows()
-# 
-# lapply(1:nrow(model_selected), function(x) ms_cov_all %>% mutate(iso3c = model_selected$iso3c[x])) %>% 
-#   bind_rows() %>% 
-#   left_join(pop %>% 
-#               group_by(iso3c) %>% 
+
+# lapply(1:nrow(model_selected), function(x) ms_cov_all %>% mutate(iso3c = model_selected$iso3c[x])) %>%
+#   bind_rows() %>%
+#   left_join(pop %>%
+#               group_by(iso3c) %>%
 #               summarise(tot = (sum(f) + sum(m))*1000),
-#             by = "iso3c") %>% 
-#   data.table() %>% 
+#             by = "iso3c") %>%
+#   data.table() %>%
 #   mutate(doses = tot*ms_cov*2) -> seg3
-# 
-# 
-# seg3 %>% 
-#   filter(iso3c == "DZA") %>% 
+
+
+# seg3 %>%
+#   filter(iso3c == "DZA") %>%
 #   mutate(date_end = ymd("2022-12-31"),
 #          speed = factor(speed, levels = c("slow", "medium", "fast"),
 #                         labels = paste(round(speed_median$vac_rate_per_million),
-#                                        "doses/million-day")))  %>% 
+#                                        "doses/million-day")))  %>%
 #   ggplot(.) +
 #   geom_segment(aes(x = start_vac, xend = date_end, y = 0, yend = ms_cov, color = speed)) +
 #   ggsci::scale_color_futurama() +
@@ -131,7 +132,7 @@ ms_cov_all %<>%
 #   theme(legend.position = "top") +
 #   labs(color = "Roll-out Speed",
 #        x = "Program Start Date",
-#        y = "Intended Coverage") 
+#        y = "Intended Coverage")
 # 
 # ggsave("figs/AfHEA/scenario_viz.png", width = 8, height = 8)
 

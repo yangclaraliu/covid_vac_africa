@@ -135,4 +135,24 @@ CJ(scenario_id = 1:36,
          tot_cost_novac = death_management_cost_novac + critical_care_cost_novac + severe_care_cost_novac + home_care_cost_novac,
          rr_cost = tot_cost/tot_cost_novac) -> cost_all
 
+cost_program %>% 
+  left_join(cost_hc_expenditure, by = "iso3c") %>% 
+  left_join(ms_cov_all %>% mutate(Type = tolower(Type)), by = c("iso3c", "date_start", "scenario", "Type")) %>% 
+  mutate(affordability = (vac_cost*Elapse/12)/hc_expenditure,
+         scenario = factor(scenario, 
+                           levels = c("slow", "medium", "fast"),
+                           labels = c("Slow", "Medium", "Fast")),
+         Type = factor(Type, levels = c("az","pfizer"),
+                       labels = c("AZ", "Pfizer")),
+         date_start = factor(date_start)) %>% 
+  filter(date_start == "2021-01-01") %>% 
+  ggplot(., aes(x = affordability, color = scenario, fill = scenario)) +
+  geom_histogram() +
+  facet_grid(~Type) +
+  theme_bw() +
+  theme(legend.position = "top") +
+  labs(color = "", fill = "", x = "Affordability", y = "Frequency") +
+  scale_color_futurama() +
+  scale_fill_futurama()
 
+ggsave("figs/affordability.png", height = 10, width = 15)
