@@ -1,6 +1,6 @@
-# shape %>% 
-#   mutate(fit = if_else(ISO3_CODE %in% tmp$iso3c, "Included", "Excluded")) %>% 
-#   st_as_sf() %>% 
+# shape %>%
+#   mutate(fit = if_else(ISO3_CODE %in% fitted_table$iso3c, "Included", "Excluded")) %>%
+#   st_as_sf() %>%
 #   ggplot(.) +
 #   geom_sf(aes(fill = fit)) +
 #   coord_sf(xlim = c(-30, 60), ylim = c(-40, 40), expand = FALSE) +
@@ -8,7 +8,7 @@
 #   scale_fill_manual(values = c("white","#0D5257")) +
 #   theme(legend.position = "top") +
 #   labs(fill = "") -> p
-# 
+
 # ggsave("figs/Report/Fitted_Countries.png", p, height = 5, width = 5)
 
 # p <- list()

@@ -3,21 +3,21 @@ ms_scenarios %>%
   dplyr::select(-date_vac_end_ext, -cov_ext) %>% 
   mutate(sim_end = if_else(date_vac_end < "2022-12-31", "2022-12-31", as.character(NA)),
          cov_end = if_else(is.na(sim_end), as.numeric(NA), 0.6),
-         scenario = factor(scenario, levels = c("slow", "medium", "fast"))) %>% 
+         scenario = factor(scenario, levels = c("slow", "medium", "fast"),
+                           labels = c("Slow", "Medium", "Fast"))) %>% 
   ggplot(.) +
   geom_segment(aes(x = date_start, xend = date_vac_end, y = 0, yend = cov, color = scenario)) + 
   geom_segment(aes(x = date_vac_end, xend = ymd(sim_end), y = 0.6, yend = 0.6, color = scenario)) +
   scale_color_futurama() +
   theme_bw() +
-  labs(x = "Vaccine Roll-out Start Date",
-       y = "Vaccine Coverage Level (two-dose)",
-       color = "") +
-  theme(legend.position = "none")
-ggsave("figs/vac_rate_viz.png", width = 8, height = 8)
+  labs(x = "Availability of supply measured by\nVaccine Roll-out Start Date",
+       y = "Ability to Deliver measured by \nVaccine Coverage Level (two-dose)",
+       color = "Ability to Deliver") +
+  theme(legend.position = "top") +
+  custom_theme +
+  lims(y = c(0,1))
 
-
-
-
+ggsave("figs/vac_rate_viz.png", width = 8, height = 6)
 
 #### Epidemic History ####
 owid_epi %>% 
@@ -119,4 +119,25 @@ tmp %>%
   labs(fill = "Case Management: Critical Care")# +facet_wrap(~NAME_ENGL   , scales = "fixed")
 
 ggsave("figs/AfHEA/cost_case_critical.png")
+
+#### visualising parameters ####
+ms_cov_all %>% 
+  mutate(scenario = factor(scenario,
+                       levels = c("slow", "medium", "fast"),
+                       labels = c("Slow", "Medium", "Fast"))) %>% 
+#   filter(Elapse == 10) %>% 
+  ggplot(., aes(x = Elapse , y = vac_unit, group = iso3c, color = scenario, fill = scenario)) +
+  geom_line() +
+  facet_wrap(scenario~Type, scales = "free") +
+  scale_fill_futurama() +
+  scale_color_futurama() +
+  theme_bw() +
+  custom_theme +
+  theme(legend.position = "top") +
+  labs(y = "Elapse Time",
+       x = "Vaccine Prices",
+       fill = "Ability to Deliver",
+       color = "Ability to Deliver")
+
+ggsave("figs/model_vaccine_price.png", width = 20, height = 10)
 

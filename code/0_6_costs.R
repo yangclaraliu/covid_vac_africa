@@ -15,6 +15,16 @@ model_cost_vaccines <- lm(value ~ iso3c + Type + Elapse + Rate,
 summary(model_cost_vaccines)
 # plot(model)
 
+readxl::read_excel(paste0(path_dropbox,
+                          "Africa Vaccine Cost 16_03_22.xlsx"),
+                   sheet = "Extrapolation") %>% 
+  set_colnames(.[3,]) %>% 
+  .[-c(1:4),] %>%
+  .[,c(1,2)] %>% 
+  mutate(iso3c = countrycode(Country, "country.name", "iso3c")) -> group_income
+  
+
+
 cost_vaccines %>% filter(`Country Name` == "Angola")
 
 
@@ -34,5 +44,15 @@ paste0(path_dropbox, "API_SH.XPD.CHEX.PC.CD_DS2_en_csv_v2_3753529.csv") %>%
   filter(iso3c %in% members$iso3c) %>% 
   dplyr::select(iso3c, `2019`) %>% 
   left_join(vac_denom, by = "iso3c") %>% 
-  mutate(hc_expenditure = tot*1000*`2019`*(108.596 / 107.303)) -> cost_hc_expenditure
+  mutate(hc_expenditure = tot*1000*`2019`*(108.596 / 107.303)) -> cost_hc_expenditure_CHEX
 
+paste0(path_dropbox, "API_SH.XPD.GHED.PC.CD_DS2_en_excel_v2_3758786.xlsx") %>% 
+  readxl::read_xlsx() %>% 
+  set_colnames(.[3,]) %>% 
+  .[-c(1:3),] %>% 
+  janitor::remove_empty() %>% 
+  rename(iso3c = `Country Code`) %>% 
+  filter(iso3c %in% members$iso3c) %>% 
+  dplyr::select(iso3c, `2019`) %>% 
+  left_join(vac_denom, by = "iso3c") %>% 
+  mutate(hc_expenditure = tot*1000*as.numeric(`2019`)*(108.596 / 107.303)) -> cost_hc_expenditure_GHED

@@ -1,6 +1,7 @@
 require(pacman)
 p_load(tidyverse, sf, data.table, countrycode, mgcv,
-       magrittr, testthat, ISOcodes, cowplot, ggsci)
+       magrittr, testthat, ISOcodes, cowplot, ggsci,
+       ggridges)
 
 path_dropbox <- "C:/Users/eideyliu/Dropbox/Github_Data/COVID-19_africa_cdc/"
 
@@ -247,11 +248,18 @@ scientific_10 <- function(x){
     parse(text = .)
 }
 
+
+custom_theme <- theme(
+  axis.text = element_text(size = 14),
+  axis.title = element_text(size = 16),
+  strip.text = element_text(size = 16),
+  legend.text = element_text(size = 14),
+  legend.title = element_text(size = 14)
+)
 # fitted_table <- read_rds("data/intermediate/fitted_table.rds")
 source("code/1_fitting_check.R")
 source("code/0_7_define_vac_rate.R")
 
-custom_theme <- theme(
-  axis.text = element_text(size = 14),
-  axis.title = element_text(size = 16)
-)
+source("code/2_1_draw_comparison.R")
+source("code/3_1_tallying_cost.R")
+

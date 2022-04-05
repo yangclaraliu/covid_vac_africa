@@ -18,22 +18,24 @@ tmp %>%
 
 tmp %>% bind_rows() %>%
   left_join(tmp_speed, by = "iso3c") %>%
-  mutate(nt_speed = factor(nt_speed, levels = 1:3, labels = speed_labels)) %>%
+  mutate(nt_speed = factor(nt_speed, levels = 1:3, 
+                           labels = c("Slow", "Medium", "Fast"))) %>%
   ggplot(., aes(x = date,
-                y = cumulative_doses_per_million/1000000,
+                y = (cumulative_doses_per_million/1000000)/2,
                 group = iso3c,
                 color = nt_speed)) +
-  geom_line(alpha = 0.7) +
+  geom_line(alpha = 1) +
   # facet_wrap(~nt_speed) +
   theme_bw() +
-  theme(legend.position = "none") +
-  labs(x = "",
-       y = "Cumulative Doses/Person") +
+  theme(legend.position = "top") +
+  labs(x = "Date",
+       y = "Cumulative Doses/Person",
+       color = "Availability to Deliver") +
   ggsci::scale_color_futurama() +
   custom_theme -> p
 
 # p
-# ggsave("figs/define_speed_AfHEA.png", width = 6, height = 6)
+ggsave("figs/define_speed_AfHEA.png", width = 6, height = 6)
 
 tmp_speed %>% 
   mutate(nt_speed = factor(nt_speed, levels = 1:3, labels = speed_labels)) %>% 

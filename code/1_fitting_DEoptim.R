@@ -2,69 +2,72 @@ require(DEoptim)
 
 # VOC_start <- "2021-06-15"
 
-# CJ(date = seq(range(owid_epi$date)[1],
-#               range(owid_epi$date)[2],
-#               "day"),
-#    iso3c = unique(owid_epi$iso3c)) %>% 
-#   left_join(owid_epi %>% 
-#               dplyr::select(iso3c, date, deaths),
-#             by = c("iso3c", "date")) %>% 
-#   left_join(owid_epi %>% 
-#               dplyr::select(loc, iso3c) %>%
-#               unique(),
-#             by = "iso3c") %>% 
-#   group_by(loc, iso3c) %>% 
-#   mutate(n_NA = length(which(is.na(deaths)))/length(deaths),
-#          year = year(date),
-#          deaths_daily_max = max(deaths, na.rm = T),
-#          # cases_daily_max = max(cases),
-#          deaths_tot = sum(deaths, na.rm = T),
-#          deaths_daily_prop = deaths/deaths_tot,
-#          deaths_daily_prop_max = max(deaths_daily_prop, na.rm = T)) %>% 
-#   filter(deaths_daily_max > 10, #) %>% 
-#   # dplyr::filter(!is.na(deaths_tot)) %>% pull(iso3c) %>% unique %>% length
-#   # ,
-#   deaths_daily_prop_max < 0.05) %>% 
-#   mutate(deaths = if_else(is.na(deaths), 0, deaths)) -> tmp
+CJ(date = seq(range(owid_epi$date)[1],
+              range(owid_epi$date)[2],
+              "day"),
+   iso3c = unique(owid_epi$iso3c)) %>%
+  left_join(owid_epi %>%
+              dplyr::select(iso3c, date, deaths),
+            by = c("iso3c", "date")) %>%
+  left_join(owid_epi %>%
+              dplyr::select(loc, iso3c) %>%
+              unique(),
+            by = "iso3c") %>%
+  group_by(loc, iso3c) %>%
+  mutate(n_NA = length(which(is.na(deaths)))/length(deaths),
+         year = year(date),
+         deaths_daily_max = max(deaths, na.rm = T),
+         # cases_daily_max = max(cases),
+         deaths_tot = sum(deaths, na.rm = T),
+         deaths_daily_prop = deaths/deaths_tot,
+         deaths_daily_prop_max = max(deaths_daily_prop, na.rm = T)) %>%
+  filter(deaths_daily_max > 10, #) %>%
+  # dplyr::filter(!is.na(deaths_tot)) %>% pull(iso3c) %>% unique %>% length
+  # ,
+  deaths_daily_prop_max < 0.05) %>%
+  mutate(deaths = if_else(is.na(deaths), 0, deaths)) -> tmp
 
-# owid_vac %>% 
-#   filter(!is.na(total_vaccinations)) %>% 
-#   left_join(pop %>% 
-#               mutate(tot = f+m) %>% 
-#               group_by(iso3c) %>% 
-#               summarise(tot = sum(tot)*1000),
-#             by = "iso3c") %>% 
-#   mutate(cov = total_vaccinations/(2*tot)) %>%
-#   filter(iso3c %in% tmp$iso3c) -> tmp_vac
+owid_vac %>%
+  filter(!is.na(total_vaccinations)) %>%
+  left_join(pop %>%
+              mutate(tot = f+m) %>%
+              group_by(iso3c) %>%
+              summarise(tot = sum(tot)*1000),
+            by = "iso3c") %>%
+  mutate(cov = total_vaccinations/(2*tot)) %>%
+  filter(iso3c %in% tmp$iso3c) -> tmp_vac
 # 
-# tmp_vac %>% 
-#   filter(cov > 0.1) %>% 
-#   group_by(location, iso3c) %>% 
-#   summarise(t_start = min(date), .groups = "drop") %>% 
-#   dplyr::select(-location) %>% 
-#   right_join(tmp %>% 
-#               dplyr::select(loc, iso3c, date, deaths) %>% 
-#               dplyr::filter(deaths > 0) %>% 
-#               mutate(date_min = min(date)) %>% 
-#               dplyr::filter(date == date_min) %>% 
-#               ungroup %>% 
-#               dplyr::select(iso3c, date_min),
-#             by = "iso3c") %>% 
-#   mutate(t_start = if_else(is.na(t_start), max(t_start, na.rm = T), t_start)) %>% 
-#   left_join(tmp %>% 
-#               dplyr::select(iso3c, loc) %>% 
-#               unique,
-#             by = "iso3c") %>% 
-#   mutate(fw_UL = date_min - ymd("2019-12-01"),
-#          fw_LL = fw_UL - 90,
-#          fw_UL = as.numeric(fw_UL),
-#          fw_LL = as.numeric(fw_LL)) %>% 
-#   arrange(loc) %>% 
-#   rownames_to_column(var = "index") %>% 
-#   mutate(vocw_LL = as.numeric(ymd("2021-01-16")-date_min),
-#          vocw_UL = as.numeric(ymd("2021-07-15")-date_min))-> stop_fitting
+tmp_vac %>%
+  filter(cov > 0.1) %>%
+  group_by(location, iso3c) %>%
+  summarise(t_start = min(date), .groups = "drop") %>%
+  dplyr::select(-location) %>%
+  right_join(tmp %>%
+              dplyr::select(loc, iso3c, date, deaths) %>%
+              dplyr::filter(deaths > 0) %>%
+              mutate(date_min = min(date)) %>%
+              dplyr::filter(date == date_min) %>%
+              ungroup %>%
+              dplyr::select(iso3c, date_min),
+            by = "iso3c") %>%
+  mutate(t_start = if_else(is.na(t_start), max(t_start, na.rm = T), t_start)) %>%
+  left_join(tmp %>%
+              dplyr::select(iso3c, loc) %>%
+              unique,
+            by = "iso3c") %>%
+  mutate(fw_UL = date_min - ymd("2019-12-01"),
+         fw_LL = fw_UL - 90,
+         fw_UL = as.numeric(fw_UL),
+         fw_LL = as.numeric(fw_LL)) %>%
+  arrange(loc) %>%
+  rownames_to_column(var = "index") %>%
+  mutate(vocw_LL = as.numeric(ymd("2021-01-16")-date_min),
+         vocw_UL = as.numeric(ymd("2021-07-15")-date_min))-> stop_fitting
+
+stop_fitting %>% arrange(t_start) %>% tail
 
 stop_fitting[stop_fitting$iso3c=="COD", "loc"] <- "Dem. Republic of the Congo"
+
 
 fit_func <- function(input){
   
