@@ -14,13 +14,14 @@ cost_all %>%
 
 impact$novac %>% 
   rename(scenario_id = epi_id) %>% 
-  dplyr::select(scenario_id, econ_id, country, ylds, ylls, dalys,GDPPC_2020_USD) %>% 
+  # dplyr::select(scenario_id, econ_id, country, ylds, ylls, dalys,GDPPC_2020_USD) %>% 
   rename(dalys_novac = dalys) -> tab[["novac"]]
 
 
 
 compile_ICER_by_threshold <- function(GDP_p, vac_type){
   tab[[vac_type]] %>% 
+  # tab$az %>% 
     dplyr::select(scenario_id, econ_id, iso3c, Type, tot_cost, tot_cost_novac, dalys) %>% 
     distinct() %>% 
     left_join(tab[["novac"]],
@@ -54,7 +55,14 @@ ICER[["pf_10"]] <- compile_ICER_by_threshold(GDP_p = 1, vac_type = "pfizer")
 #   ungroup %>%
 #   select(iso3c, GDP_rank, GDP_label) %>%
 #   arrange(GDP_rank) %>%
-#   distinct() %>%
+#   disgeom_tile(color = "black", size = 0.25) +
+geom_tile(color = "black", size = 0.25) +
+geom_tile(color = "black", size = 0.25) +
+geom_tile(color = "black", size = 0.25) +
+geom_tile(color = "black", size = 0.25) +
+geom_tile(color = "black", size = 0.25) +
+geom_tile(color = "black", size = 0.25) +
+tinct() %>%
 #   pull(GDP_label) -> tmp_labels
 # 
 # tmp %>%
@@ -96,6 +104,47 @@ ICER$az_05 %>%
 ggsave("figs/ICER_ranking_full.png", height = 10, width = 20)
 
 #### ICER RAW #### 
+p_list <- list()
+
+require(RColorBrewer)
+
+for(i in group_income$`Income Group` %>% unique){
+ICER$az_05 %>% 
+  mutate(Type = "Viral Vector Vaccines") %>% 
+  bind_rows(ICER$pf_05 %>% 
+              mutate(Type = "mRNA Vaccines")) %>% 
+  filter(econ_id == 1) %>% 
+  mutate(scenario = factor(scenario, levels = c("slow", "medium", "fast"),
+                           labels = c("Slow", "Medium", "Fast")),
+         ICER_factor=cut(ICER_scaled, 
+                         breaks=c(-0.3, 0.1, 0.5, 1, 5, 10, 16),
+                         labels=c("<0.1", "0.1-0.5", "0.5-1", 
+                                  "1-5", "5-10", ">10"))) %>% 
+  left_join(group_income, by = "iso3c") %>%
+  filter(`Income Group` == i) %>%
+  ggplot(., aes(x = date_start, y = reorder(iso3c, ICER_scaled), fill = ICER_factor)) +
+  geom_tile(color = "black", size = 0.5) +
+  facet_grid(scenario ~ Type) +
+  scale_fill_manual(values=rev(brewer.pal(6, "YlGnBu")), na.value="grey90") +
+  scale_x_continuous(breaks = ymd("2021-06-01")) +
+  theme_bw() +
+  custom_theme +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top",
+        legend.key.size = unit(1, "cm")) +
+  labs(x = "Availability of Supply measured by\nVaccine Roll-out Start Date",
+       fill = "Scaled ICER value by GDPpc") -> p_list[[i]]
+}
+
+plot_grid(plotlist = list(p_list$LIC + theme(legend.position = "none", strip.text.y = element_blank()) + labs(title = "A. Low Income"),
+                          p_list$LMIC + theme(legend.position = "none") + labs(title = "B. Lower Middle Income"),
+                          plot_grid(get_legend(p_list$LIC), NA,
+                                    p_list$UMIC + theme(legend.position = "none") + labs(title = "C. Upper Middle Income"), rel_heights = c(1, 3,3), ncol = 1)),
+          ncol = 3)
+ggsave("figs/ICER_scaled_raw_income_v2.png", height = 10, width = 20)
+
 ICER$az_05 %>% 
   mutate(Type = "AZ") %>% 
   bind_rows(ICER$pf_05 %>% 

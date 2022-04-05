@@ -91,12 +91,12 @@ res$pfizer$non_fatal %>%
   summarise(critical_care_cost = sum(critical_care_cost),
             critical_care_cost_novac = sum(critical_care_cost_novac)) -> cost_critical_care
 
-res$pfizer$fatal %>% 
-  mutate(Type = "pfizer") %>% 
-  bind_rows(res$az$fatal %>% 
-              mutate(Type = "az")) %>% 
-  group_by(scenario_id, population, year, Type) %>% 
-  summarise(value = sum(value))
+# res$pfizer$fatal %>% 
+#   mutate(Type = "pfizer") %>% 
+#   bind_rows(res$az$fatal %>% 
+#               mutate(Type = "az")) %>% 
+#   group_by(scenario_id, population, year, Type) %>% 
+#   summarise(value = sum(value))
 
 res$pfizer$fatal %>% 
   mutate(Type = "pfizer") %>% 
