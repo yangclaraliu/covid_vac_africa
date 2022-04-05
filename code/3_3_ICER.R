@@ -56,13 +56,13 @@ ICER[["pf_10"]] <- compile_ICER_by_threshold(GDP_p = 1, vac_type = "pfizer")
 #   select(iso3c, GDP_rank, GDP_label) %>%
 #   arrange(GDP_rank) %>%
 #   disgeom_tile(color = "black", size = 0.25) +
-geom_tile(color = "black", size = 0.25) +
-geom_tile(color = "black", size = 0.25) +
-geom_tile(color = "black", size = 0.25) +
-geom_tile(color = "black", size = 0.25) +
-geom_tile(color = "black", size = 0.25) +
-geom_tile(color = "black", size = 0.25) +
-tinct() %>%
+# geom_tile(color = "black", size = 0.25) +
+# geom_tile(color = "black", size = 0.25) +
+# geom_tile(color = "black", size = 0.25) +
+# geom_tile(color = "black", size = 0.25) +
+# geom_tile(color = "black", size = 0.25) +
+# geom_tile(color = "black", size = 0.25) +
+# tinct() %>%
 #   pull(GDP_label) -> tmp_labels
 # 
 # tmp %>%
@@ -143,7 +143,8 @@ plot_grid(plotlist = list(p_list$LIC + theme(legend.position = "none", strip.tex
                           plot_grid(get_legend(p_list$LIC), NA,
                                     p_list$UMIC + theme(legend.position = "none") + labs(title = "C. Upper Middle Income"), rel_heights = c(1, 3,3), ncol = 1)),
           ncol = 3)
-ggsave("figs/ICER_scaled_raw_income_v2.png", height = 10, width = 20)
+
+ggsave("figs/ICER_scaled_raw_income_econ_id_1.png", height = 10, width = 20)
 
 ICER$az_05 %>% 
   mutate(Type = "AZ") %>% 
@@ -268,3 +269,32 @@ tab$az %>%
              linetype = 2)
 
 ggsave("figs/impact.png", width = 15, height = 8)
+
+ICER$az_05 %>% 
+  mutate(Type = "Viral Vector Vaccine") %>% 
+  bind_rows(ICER$pf_05 %>% 
+              mutate(Type = "mRNA Vaccine")) %>% 
+  group_by(date_start, econ_id, Type, iso3c) %>% 
+  left_join(vac_denom, by = "iso3c") %>% 
+  mutate(ICER_rank = rank(desc(ICER)) %>% factor(., levels = 1:3),
+         iso3c = factor(iso3c),
+         scenario = factor(scenario,
+                           levels = c("slow", "medium", "fast"),
+                           labels = c("Slow", "Medium", "Fast")),
+         diff_health_pc = diff_health/(tot*1000),
+         diff_cost_pc = diff_cost/(tot*1000)) %>% 
+  ggplot(., aes(x = diff_health_pc, y = diff_cost_pc, color = scenario)) +
+  geom_point(alpha = 0.5) +
+  facet_wrap(~date_start, nrow = 2) +
+  geom_vline(xintercept = 0, linetype = 2) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  scale_color_futurama() +
+  theme_bw() +
+  custom_theme +
+  theme(panel.grid = element_blank(),
+        legend.position = "top") +
+  labs(color = "",
+       x = "Difference in Dalys (normalised by population size)",
+       y = "Difference in Costs (normalised by population size)") 
+
+ggsave("figs/CE_plan_v2.pdf", width = 18, height = 8)
