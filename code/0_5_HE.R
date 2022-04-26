@@ -229,7 +229,8 @@ cov_dLE <- function(
 cov_unit_ylds <- function (){
   
   weights <- list(
-    acute        = 0.051,
+    acute_mild   = 0.006,
+    acute_mod    = 0.051,
     non_icu      = 0.133,
     icu          = 0.655,
     post_acute   = 0.219
@@ -238,20 +239,25 @@ cov_unit_ylds <- function (){
   unit_ylds <- list()
   
   # Acute episode: assume mean 5 days based on infectious duration in CovidM
-  acute <- (5/365) * weights$acute 
+  # In line with costing assumption assumption that 10% of community cases seek
+  # healthcare and therefore have symptoms corresponding to moderate weight
+  # remaining 90% experience mild weight
+  acute <- (5/365) * (0.9 * weights$acute_mild + 0.1 * weights$acute_mod) 
   
   # For post-acute assume 20% of cases over 6 months
   # Sandmann et al. 16.8% reported physical symptoms at 6 months
   # Menges et al.   26% reporting symptoms at 6-8 months
-  
   post_acute <- 0.2 * 183/365 * weights$post_acute
   
   # ylds per case
   unit_ylds$per_case <- acute + post_acute
   
   # ylds per hospitalised case 
-  unit_ylds$per_non_icu_case <- (8/365)  * weights$non_icu # mean LOS 8 days from Davies et al.
-  unit_ylds$per_icu_case     <- (10/365) * weights$icu     # mean LOS 10 days from Davies et al.
+  # mean LOS 9.60 for hospital stay with no icu component (Leclerc et al 2021 BMC HSR)
+  unit_ylds$per_non_icu_case <- (9.60 /365)  * weights$non_icu   
+  # mean LOS 21.58 for hospital stay with any icu component (Leclerc et al 2021 BMC HSR)
+  # From paper (23.32*3603+12.18*183+20.75*2521+10.91*232)/6539
+  unit_ylds$per_icu_case     <- (21.58/365.25) * weights$icu
   
   return(unit_ylds)
   
