@@ -90,7 +90,15 @@ si %>%
                values_to = "StringencyIndex") -> si
 
 # members[which((members$iso3c %in% si$iso3c)),] -> members
-# si %>% 
+si %>% 
+  filter(source == "assumed") %>% 
+  group_by(iso3c) %>% 
+  filter(date == min(date)) %>%
+  filter(iso3c %in% fitted_table$iso3c) %>% 
+  filter(StringencyIndex %in% c(76.85, 19.44)) %>% left_join(members, by = "iso3c")
+  pull(StringencyIndex) %>% summary
+
+# si %>%
 #   ggplot(., aes(x = date, y = StringencyIndex, col = source)) +
 #   geom_point() +
 #   geom_line() +

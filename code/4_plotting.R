@@ -2,12 +2,12 @@
 ms_scenarios %>% 
   dplyr::select(-date_vac_end_ext, -cov_ext) %>% 
   mutate(sim_end = if_else(date_vac_end < "2022-12-31", "2022-12-31", as.character(NA)),
-         cov_end = if_else(is.na(sim_end), as.numeric(NA), 0.6),
+         cov_end = if_else(is.na(sim_end), as.numeric(NA), 0.7),
          scenario = factor(scenario, levels = c("slow", "medium", "fast"),
                            labels = c("Slow", "Medium", "Fast"))) %>% 
   ggplot(.) +
   geom_segment(aes(x = date_start, xend = date_vac_end, y = 0, yend = cov, color = scenario)) + 
-  geom_segment(aes(x = date_vac_end, xend = ymd(sim_end), y = 0.6, yend = 0.6, color = scenario)) +
+  geom_segment(aes(x = date_vac_end, xend = ymd(sim_end), y = 0.7, yend = 0.7, color = scenario)) +
   scale_color_futurama() +
   theme_bw() +
   labs(x = "Availability of supply measured by\nVaccine Roll-out Start Date",
@@ -50,9 +50,6 @@ ggsave("figs/AfHEA/cases_ts.png",
        width = 15, height = 10)
 
 #### vaccination rate achievable ####
-
-
-
 owid_vac %>% 
   dplyr::select(iso3c, date, people_fully_vaccinated) %>% 
   filter(!is.na(people_fully_vaccinated)) %>% 
@@ -61,7 +58,7 @@ owid_vac %>%
               summarise(tot = (sum(f) + sum(m))*1000),
             by = "iso3c") %>% 
   mutate(cov = people_fully_vaccinated/tot) %>%
-  filter(cov >= 0.01) %>% 
+  filter(cov >= 0) %>% 
   group_by(iso3c) %>% 
   mutate(date_min = min(date)) %>% 
   filter(date == date_min) %>% 
@@ -78,8 +75,16 @@ owid_vac %>%
                         days = n(),
                         burden = cases/days) %>% 
               dplyr::select(iso3c, burden),
-            by = "iso3c") %>% 
-  ggplot(., aes(x = date, y = Estimate, size = (tot)/1000000, fill = log(burden))) +
+            by = "iso3c") %>% #   -> mark_0
+# mark_1 %>% 
+#   left_join(mark_10, by = "iso3c") %>% 
+#   mutate( d = date.x - date.y) %>% 
+#   pull(d) %>% as.numeric %>% summary
+# 
+# mark_0$date %>% summary
+  ggplot(., aes(x = date, y = Estimate,
+                # fill = log(burden), 
+                size = (tot)/1000000)) +
   geom_point(pch = 21, stroke = 1.4) +
   geom_hline(yintercept = speed_median$vac_rate_per_million, linetype = 2) +
   # scale_size(
@@ -89,11 +94,24 @@ owid_vac %>%
   theme_cowplot() +
   ggsci::scale_fill_material("red") +
   guides(fill = F) +
-  labs(size = "Population Size (million)", x = "First Day with Proportion of Population\n Fully Covered by Vaccine Exceed 1%", y = "Doses Administered/ Million-Day") +
+  labs(size = "Population Size (million)", x = "First Day with Proportion of Population\n Fully Covered by Vaccine Exceed 1%", y = "Doses Administered/ Million Population-Day") +
   theme(legend.position = "top") +
   lims(x = c(ymd("2021-01-01", "2021-12-31")))
 
-ggsave("figs/AfHEA/vac_rate.png",
+owid_epi %>% 
+  group_by(iso3c) %>% 
+  mutate(death_min = min(deaths)) %>% 
+  filter(deaths == death_min) %>% 
+  mutate(date_min = min(date)) %>% 
+  filter(date == date_min) %>% 
+  dplyr::select(iso3c, date_min) %>% 
+  rename(t_start_fitting = date_min) %>% 
+  right_join(fitted_table, by = "iso3c") %>% 
+  dplyr::select(loc, iso3c, t_start_fitting, t_end_fitting) -> tmp
+  
+write_csv(tmp, "data/List_Fitted.csv")
+
+ggsave("figs/vac_rate.png",
        width = 6, height = 6)
 
 ##### healthcare cost viz ####

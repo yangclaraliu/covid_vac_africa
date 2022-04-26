@@ -18,7 +18,7 @@ impact$az %>%
   dplyr::select(-econ_id) %>% 
   distinct() %>% 
   mutate(vsl_diff = vsl_novac - vsl,
-         cost_diff = tot_cost - tot_cost_novac) %>% 
+         cost_diff = tot_cost_novac - tot_cost) %>% 
   left_join(vac_denom, by = "iso3c") %>% 
   mutate(tot = tot*1000,
          NMB = vsl_diff - cost_diff,
@@ -68,4 +68,4 @@ plot_grid(plotlist = list(p_list$LIC +
                                     ncol = 1)),
           ncol = 3)
 
-ggsave("figs/VSL.png", height = 10, width = 20)
+ggsave("figs/VSL_v3.png", height = 10, width = 20)

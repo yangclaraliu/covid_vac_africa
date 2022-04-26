@@ -27,7 +27,20 @@ source("code/util_functions.R")
 #                              "iso3c")) -> members
 # members[members$country_name == "Somali Republic", "iso3c"] <- "SOM"
 # members[members$country_name == "Saharawi Arab Democratic Republic", "iso3c"] <- "ESH"
+
+# lapply(1:4, function(x){
+#   rvest::read_html("https://au.int/en/member_states/countryprofiles2") %>%
+#     rvest::html_table() %>%
+#     .[[x]] %>% .[,2] %>% .[-1,]
+# }) %>% 
+#   bind_rows() %>% 
+#   pull(X2) %>% 
+#   paste0("\'", .) %>% 
+#   paste0(., "\'") %>% 
 # 
+#   paste0(., collapse = " OR ") %>%  -> search_term2
+ #-> members
+
 # cm_populations %>%
 #   filter(location_type == 4) %>%
 #   dplyr::select(name) %>% distinct() %>%

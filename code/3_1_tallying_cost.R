@@ -1,8 +1,8 @@
 discount_r <- 0.03
 
-ms_cov_all <- readRDS("~/GitHub/covid_vac_africa/data/intermediate/ms_cov_all.rds")
+ms_cov_all <- read_rds("~/GitHub/covid_vac_africa/data/intermediate/ms_cov_all.rds")
 
-ms_scenarios <- readRDS("~/GitHub/covid_vac_africa/data/intermediate/ms_scenarios.rds") %>% 
+ms_scenarios <- read_rds("~/GitHub/covid_vac_africa/data/intermediate/ms_scenarios.rds") %>%
   rownames_to_column(var = "scenario_id")
 
 ms_cov_all %>% 
@@ -19,11 +19,11 @@ ms_cov_all %>%
          cov_achieved_diff1_dose2 = days_diff1_dose2 *r_vac,
          cov_achieved_diff2_dose1 = days_diff2_dose1 *r_vac,
          cov_achieved_diff2_dose2 = days_diff2_dose2 *r_vac,
-         cov_achieved_diff2_dose1 = if_else(cov_achieved_diff1_dose1 + cov_achieved_diff2_dose1 > 0.6,
-                                            0.6 - cov_achieved_diff1_dose1,
+         cov_achieved_diff2_dose1 = if_else(cov_achieved_diff1_dose1 + cov_achieved_diff2_dose1 > 0.7,
+                                            0.7 - cov_achieved_diff1_dose1,
                                             cov_achieved_diff2_dose1),
-         cov_achieved_diff2_dose2 = if_else(cov_achieved_diff1_dose2 + cov_achieved_diff2_dose2 > 0.6,
-                                            0.6 - cov_achieved_diff1_dose2,
+         cov_achieved_diff2_dose2 = if_else(cov_achieved_diff1_dose2 + cov_achieved_diff2_dose2 > 0.7,
+                                            0.7 - cov_achieved_diff1_dose2,
                                             cov_achieved_diff2_dose2),
          year1_doses = (cov_achieved_diff1_dose1 + cov_achieved_diff1_dose2)*tot*1000,
          year2_doses = (cov_achieved_diff2_dose1 + cov_achieved_diff2_dose2)*tot*1000,
@@ -58,8 +58,8 @@ res$pfizer$non_fatal %>%
   mutate(hosp = as.numeric(hosp),
          hosp = hosp* (108.596 / 107.303),
          hosp_disc = hosp/(1+discount_r),
-         severe_care_cost = if_else(year == 2021, value*8*hosp, value*8*hosp_disc),
-         severe_care_cost_novac = if_else(year == 2021, novac*8*hosp, novac*8*hosp_disc)) %>% 
+         severe_care_cost = if_else(year == 2021, value*9.6*hosp, value*9.6*hosp_disc),
+         severe_care_cost_novac = if_else(year == 2021, novac*9.6*hosp, novac*9.6*hosp_disc)) %>% 
   group_by(scenario_id, population, name, Type) %>% 
   summarise(severe_care_cost = sum(severe_care_cost),
             severe_care_cost_novac = sum(severe_care_cost_novac)) -> cost_severe_care
@@ -79,11 +79,11 @@ res$pfizer$non_fatal %>%
          icu = icu * (108.596 / 107.303),
          icu_disc = icu/(1+discount_r),
          critical_care_cost = if_else(year == 2021, 
-                                      value*(icu)*10 + value*(hosp)*8,
-                                      value*(icu_disc)*10 + value*(hosp_disc)*8),
+                                      value*(icu)*12.6 + value*(hosp)*8.88,
+                                      value*(icu_disc)*12.6 + value*(hosp_disc)*8.88),
          critical_care_cost_novac = if_else(year == 2021,
-                                            novac*icu*10 + novac*hosp*8,
-                                            novac*icu_disc*10 + novac*hosp_disc*8))  %>%
+                                            novac*icu*12.6 + novac*hosp*8.88,
+                                            novac*icu_disc*12.6 + novac*hosp_disc*8.88))  %>%
   # filter(population == "Algeria", scenario_id == 1) #%>% 
   # filter(Type == "az") %>% 
   # dplyr::select(-value) %>% pivot_wider(names_from = Type, values_from = novac)

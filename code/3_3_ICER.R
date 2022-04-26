@@ -37,6 +37,7 @@ compile_ICER_by_threshold <- function(GDP_p, vac_type){
            ICER_scaled_bin = if_else(ICER_scaled >= GDP_p, F, T)) -> m
   return(m)
 }
+
 ICER <- list()
 ICER[["az_03"]] <- compile_ICER_by_threshold(GDP_p = 0.3, vac_type = "az")
 ICER[["az_05"]] <- compile_ICER_by_threshold(GDP_p = 0.5, vac_type = "az")
@@ -87,7 +88,7 @@ ICER$az_05 %>%
   group_by(date_start, scenario, econ_id, Type, ICER_rank, ICER_scaled_bin ) %>% tally %>% 
   # filter(Type == "Pfizer") %>% 
   filter(econ_id == 1) %>% 
-  filter(ICER_scaled_bin == T) %>% 
+  # filter(ICER_scaled_bin == T) %>% 
   ggplot(., aes(x = date_start, y = n, color = ICER_rank, fill = ICER_rank)) +
   geom_bar(stat = "identity", position = "stack", width=32) +
   scale_fill_rickandmorty() +
@@ -101,7 +102,7 @@ ICER$az_05 %>%
        fill = "ICER Ranking",
        x = "Availability of Supply measured by\nVaccine Roll-out Start Date")
 
-ggsave("figs/ICER_ranking_full.png", height = 10, width = 20)
+# ggsave("figs/ICER_ranking_full_v3.png", height = 10, width = 20)
 
 #### ICER RAW #### 
 p_list <- list()
@@ -114,12 +115,13 @@ ICER$az_05 %>%
   bind_rows(ICER$pf_05 %>% 
               mutate(Type = "mRNA Vaccines")) %>% 
   filter(econ_id == 1) %>% 
+  # filter(scenario == "fast", Type == "Viral Vector Vaccines", date_start == "2021-01-01")
   mutate(scenario = factor(scenario, levels = c("slow", "medium", "fast"),
                            labels = c("Slow", "Medium", "Fast")),
          ICER_factor=cut(ICER_scaled, 
-                         breaks=c(-0.3, 0.1, 0.5, 1, 5, 10, 16),
-                         labels=c("<0.1", "0.1-0.5", "0.5-1", 
-                                  "1-5", "5-10", ">10"))) %>% 
+                         breaks=c(-0.5, 0.1, 0.3, 0.5, 1, 16),
+                         labels=c("<0.1", "0.1-0.3", "0.3-0.5", 
+                                  "0.5-1", ">1"))) %>% 
   left_join(group_income, by = "iso3c") %>%
   filter(`Income Group` == i) %>%
   ggplot(., aes(x = date_start, y = reorder(iso3c, ICER_scaled), fill = ICER_factor)) +
@@ -135,16 +137,47 @@ ICER$az_05 %>%
         legend.position = "top",
         legend.key.size = unit(1, "cm")) +
   labs(x = "Availability of Supply measured by\nVaccine Roll-out Start Date",
-       fill = "Scaled ICER value by GDPpc") -> p_list[[i]]
+       fill = "Normalised ICER") -> p_list[[i]]
 }
 
-plot_grid(plotlist = list(p_list$LIC + theme(legend.position = "none", strip.text.y = element_blank()) + labs(title = "A. Low Income"),
-                          p_list$LMIC + theme(legend.position = "none") + labs(title = "B. Lower Middle Income"),
-                          plot_grid(get_legend(p_list$LIC), NA,
-                                    p_list$UMIC + theme(legend.position = "none") + labs(title = "C. Upper Middle Income"), rel_heights = c(1, 3,3), ncol = 1)),
-          ncol = 3)
+p1 <- plot_grid(plot_grid(NA, 
+                       p_list$LIC + theme(legend.position = "none") + labs(title = "A. Low Income"),
+                       rel_heights = c(1, 5), ncol = 1),
+                p_list$LMIC + theme(legend.position = "none") + labs(title = "B. Lower Middle Income"),
+                align = "h")
 
-ggsave("figs/ICER_scaled_raw_income_econ_id_1.png", height = 10, width = 20)
+plot_grid(plotlist = list(p1,
+                          plot_grid(get_legend(p_list$LIC + guides(fill=guide_legend(nrow=2,byrow=TRUE))), NA,
+                                    p_list$UMIC + theme(legend.position = "none") + labs(title = "C. Upper Middle Income"), 
+                                    rel_heights = c(1, 3,3), ncol = 1)),
+          ncol = 2,
+          rel_widths = c(2,1))
+
+# ggsave("figs/ICER_scaled_raw_income_econ_id_1_v3.png", height = 10, width = 20)
+ggsave("figs/fig3.png", height = 10, width = 20)
+
+#### INLINE STATS ####
+ICER$az_05 %>% 
+  mutate(Type = "Viral Vector Vaccines") %>% 
+  bind_rows(ICER$pf_05 %>% 
+              mutate(Type = "mRNA Vaccines")) %>% 
+  filter(econ_id == 1) %>% 
+  # filter(scenario == "fast", Type == "Viral Vector Vaccines", date_start == "2021-01-01")
+  mutate(scenario = factor(scenario, levels = c("slow", "medium", "fast"),
+                           labels = c("Slow", "Medium", "Fast")),
+         ICER_factor=cut(ICER_scaled, 
+                         breaks=c(-0.5, 0.1, 0.3, 0.5, 1, 16),
+                         labels=c("<0.1", "0.1-0.3", "0.3-0.5", 
+                                  "0.5-1", ">1"))) %>% 
+  left_join(group_income, by = "iso3c") %>% 
+  filter(date_start == "2021-08-01") %>% 
+  mutate(ICER_scaled_bin = ICER_scaled < 0.5) %>% 
+  group_by(scenario, Type) %>% 
+  summarise(CE = sum(ICER_scaled_bin),
+            CE_n = n()) %>% 
+  mutate(r = CE/CE_n) %>% arrange(Type)
+
+
 
 ICER$az_05 %>% 
   mutate(Type = "AZ") %>% 
@@ -163,20 +196,21 @@ ICER$az_05 %>%
               mutate(threshold = 1)) %>% 
   group_by(date_start, econ_id, scenario, Type, threshold) %>% 
   summarise(ICER_CE = sum(ICER_scaled_bin)) %>% 
+  filter(threshold == 0.5) %>% 
   mutate(ICER_CE_prop = ICER_CE/nrow(fitted_table),
          scenario = factor(scenario, levels = c("slow", "medium", "fast"),
                            labels = c("Slow", "Medium", "Fast")),
          Type = factor(Type, levels = c("AZ", "Pfizer"), labels = c("Viral Vector Vaccines", "mRNA Vaccines")),
-         threshold = paste0("Decision Threshold = ",threshold,"* GDP"),
+         threshold = paste0("Decision Threshold = ",threshold," * GDP"),
          econ_id = factor(econ_id, levels = 1:3,
                           labels = c("Discount Rate = 0.03\nSMR = 1",
                                      "Discount Rate = 0\nSMR = 1",
                                      "Discount Rate = 0.03\nSMR = 1.5"))) %>% 
-  filter(econ_id == "Discount Rate = 0.03\nSMR = 1") %>% 
-  ggplot(., aes(x = date_start, y = ICER_CE_prop, group = scenario, color = scenario)) +
+  # filter(econ_id == "Discount Rate = 0.03\nSMR = 1") %>% 
+  ggplot(., aes(x = date_start, y = ICER_CE_prop, scenario, color = scenario)) +
   geom_line() +
   geom_smooth(alpha = 0.5, aes(fill = scenario)) +
-  facet_grid(Type ~ threshold) +
+  facet_grid(Type ~ econ_id) +
   labs(x = "Availability of Supply measured by\nVaccine Roll-out Start Date",
       y = "Proportion of Countries with Cost-Effective Strategies") +
   theme_bw() +
@@ -186,7 +220,7 @@ ICER$az_05 %>%
   scale_color_futurama() +
   scale_fill_futurama()
 
-ggsave("figs/prop_CE.png", height = 10, width = 15)
+ggsave("figs/prop_CE_econ_v1.png", height = 10, width = 15)
 
 ICER$az_05 %>% 
   mutate(Type = "Viral Vector Vaccines") %>% 
@@ -194,35 +228,82 @@ ICER$az_05 %>%
               mutate(Type = "mRNA Vaccines")) %>% 
   left_join(cost_hc_expenditure_GHED, by = "iso3c") %>% 
   # left_join(ms_cov_all %>% mutate(Type = tolower(Type)), by = c("iso3c", "date_start", "scenario", "Type")) %>% 
-  mutate(affordability = (diff_cost/2)/hc_expenditure,
+  mutate(affordability = (diff_cost/2)/hc_expenditure, #dividing 
          scenario = factor(scenario, 
                            levels = c("slow", "medium", "fast"),
                            labels = c("Slow", "Medium", "Fast")),
          # Type = factor(Type, levels = c("az","pfizer"),
          #               labels = c("AZ", "Pfizer")),
          date_start = factor(date_start)) %>% 
-  # filter(date_start == "2021-02-01") %>% 
-  ggplot(., aes(x = affordability, y = date_start, 
-                fill = scenario, color = scenario)) +
-  geom_density_ridges(alpha = 0.1) +
+  filter(!is.na(affordability), econ_id == 1) %>% mutate(date_start = ymd(date_start)) %>% 
+  # filter(affordability > 1) %>% group_by(name, Type) %>% tally
+  # filter(date_start %in% ymd(c("2021-01-01", 
+  #                          "2021-08-01",
+  #                          "2021-12-01")), !is.na(affordability), econ_id == 1) %>%
+  mutate(ICER_scaled = if_else(ICER_scaled > 1, 1.1, ICER_scaled)) %>% 
+  mutate(affordability = if_else(affordability > 1, 1.1, affordability),
+         m = month(date_start)) %>% 
+  group_by(Type, scenario) %>% filter(ICER_scaled_bin == T) %>% 
+  summarise(Q1 = quantile(affordability, 0.25),
+            md = quantile(affordability, 0.5),
+            Q3 = quantile(affordability, 0.75),
+            n = n()) %>% View()
+  # mutate(ICER_scaled  = if_else(ICER_scaled < 0, 0.05, ICER_scaled )) %>% 
+  # mutate(affordability  = if_else(affordability < 0, 0.05, affordability)) %>%  
+  # group_by(Type, scenario) %>% tally
+  ggplot(., aes(x = ICER_scaled, y = affordability, color = m)) +
+  geom_rect(aes(xmin = 1.05, xmax = 1.15, ymin = min(affordability), ymax = max(affordability)*1.15),
+            fill = "grey90", color = NA) +
+  geom_rect(aes(xmin = min(ICER_scaled)*0.95, xmax = 1.15, ymin = 1.05, ymax = max(affordability)*1.15),
+            fill = "grey90", color = NA) +
+  geom_point(alpha = 0.5) +
+  viridis::scale_color_viridis(breaks = c(3,6,9, 12),
+                               labels = c("Mar.",
+                                          "Jun.",
+                                          "Sep.",
+                                          "Dec."),
+                               option = "magma") +
+  # geom_line(aes(group = iso3c)) +
+  # ggplot(., aes(x = affordability, y = scenario,  
+  #               fill = scenario, 
+  #               color = scenario)) +
+  # ggplot(., aes(x = affordability, y = date_start)) +
+  # geom_density_ridges(alpha = 0.01) +
   # geom_histogram() +
   # geom_density_ridges(alpha = 0.5, scale = 0.95, stat = "binline", binwidth = 0.02) +
   # geom_density(alpha = 0.1) +
-  facet_grid(~Type) +
+  facet_grid(scenario~Type) +
+  # facet_grid( ~ Type, scales = "free") +
+  # facet_grid(date_start ~ Type) +
   theme_bw() +
   theme(legend.position = "top") +
-  labs(color = "", fill = "", x = "Affordability\nIncremental Costs/General Healthcare Expenditure",
-       y = ""
+  labs(color = "Vaccination Program Starting Date\n(2021)", fill = "", 
+       y = "Affordability\nIncremental Costs/General Healthcare Expenditure",
+       x = "Normalised ICER"
        # y = "Frequency"
        ) +
-  scale_color_futurama() +
-  scale_fill_futurama() +
+  # scale_color_futurama() +
+  # scale_fill_futurama() +
   custom_theme +
-  theme(panel.grid = element_blank()) +
-  geom_vline(xintercept = 0, linetype = 2) +
-  scale_x_continuous(breaks = c(0, 0.5, 1), labels = c("0%", "50%", "100%"), limits = c(0,1)) 
+  theme(panel.grid = element_blank(),
+        strip.background = element_rect(fill = NA),
+        legend.key.width = unit(1, 'cm')) +
+  # geom_vline(xintercept = 0.3, linetype = 2, color = "black") +
+  geom_vline(xintercept = 0.5, linetype = 1, color = "black") +
+  geom_vline(xintercept = 0, linetype = 1, color = "black") +
+  geom_hline(yintercept = 0, linetype = 1, color = "black") +
+  geom_hline(yintercept = 0.1, linetype = 2, color = "black") +
+  # geom_hline(yintercept = 0.15, linetype = 2, color = "black") +
+  geom_hline(yintercept = 0.2, linetype = 2, color = "black") +
+  scale_x_continuous(breaks = c(0, 0.3, 0.5, 1, 1.1),
+                     labels = c(0, 0.3, 0.5, 1, ">1")) + 
+  scale_y_continuous(breaks = c(0, 0.1, 0.2, 1, 1.1),
+                     labels = c("0%", "10%", "20%", "100%", ">100%"))
+  # scale_x_continuous(breaks = c(0, 0.5, 1), 
+  #                    labels = c("0%", "50%", "100%"), limits = c(-0.3,2)) 
 
-ggsave("figs/affordability_full.png", height = 10, width = 10)
+# ggsave("figs/affordability_v2.png", height = 10, width = 20)
+ggsave("figs/fig5.png", height = 10, width = 8)
 
 # tab$az %>% 
 
@@ -297,4 +378,4 @@ ICER$az_05 %>%
        x = "Difference in Dalys (normalised by population size)",
        y = "Difference in Costs (normalised by population size)") 
 
-ggsave("figs/CE_plan_v2.pdf", width = 18, height = 8)
+ggsave("figs/CE_plane_v3.png", width = 18, height = 8)

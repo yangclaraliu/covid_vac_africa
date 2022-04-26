@@ -8,7 +8,8 @@ readxl::read_excel(paste0(path_dropbox,
                                sheet = "Scenarios - Description") %>% 
               mutate(Scenario = as.character(Scenario)),
             by = "Scenario") %>% 
-  rename(iso3c = `Country Code`)-> cost_vaccines
+  rename(iso3c = `Country Code`) %>% 
+  mutate(value = value * (108.55552/113.06642)) -> cost_vaccines
 
 model_cost_vaccines <- lm(value ~ iso3c + Type + Elapse + Rate, 
                           data = cost_vaccines)

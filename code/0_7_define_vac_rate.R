@@ -69,7 +69,7 @@ CJ(date_start = seq(ymd("2021-01-01"), ymd("2021-12-15"), by = "month"),
          Rate = case_when(scenario == "slow" ~ 275,
                            scenario == "medium" ~ 826,
                            scenario == "fast" ~ 2066),
-         sat_days = 0.6/r_vac,
+         sat_days = 0.7/r_vac,
          date_end = ymd("2022-12-31"),
          date_end_ext = ymd("2023-06-30"),
          window_allowed = date_end - date_start,
@@ -89,10 +89,10 @@ CJ(date_start = seq(ymd("2021-01-01"), ymd("2021-12-15"), by = "month"),
                                 date_start + sat_days,
                                 ymd("2023-06-30")),
          cov = if_else(sat == T,
-                       0.6,
+                       0.7,
                        r_vac*as.numeric(window_allowed)),
          cov_ext = if_else(sat_ext == T,
-                           0.6,
+                           0.7,
                            r_vac*as.numeric(window_allowed_ext))) -> ms_cov_all
 
 predict(model_cost_vaccines, 
@@ -106,7 +106,6 @@ predict(model_cost_vaccines,
 ms_cov_all %<>% 
   mutate(vac_unit = vac_unit,
          vac_unit_ext = vac_unit_ext)
-
 
 # ms_cov_all <- lapply(1:nrow(ms_date_all), function(x) {draw_supply(start_vac = ms_date_all$date_start[x])}) %>%
 #   bind_rows()

@@ -217,6 +217,11 @@
 # # write_rds(gm_tmp, "data/gm_ts.rds")
 gm_ts <- read_rds("data/gm_ts.rds")
 
+gm_ts %>% filter(iso3c == "ZWE") %>% 
+  mutate(date = ymd(date)) %>% 
+  ggplot(., aes(x = date, y = grocery)) +
+  geom_line()
+
 # gm_ts %>%
 #   ggplot(., aes(x = date, y = get("work"), group = iso3c)) +
 #   geom_line() +
@@ -271,6 +276,7 @@ gm_scaled %>%
   ggplot(., aes(x = date, y = work)) +
   geom_line() +
   facet_wrap(~iso3c)
+
 # 
 country_data_length <-
   gm_scaled %>% group_by(iso3c) %>% group_split() %>% map(nrow) %>% unlist()
