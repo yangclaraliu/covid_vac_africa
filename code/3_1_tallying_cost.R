@@ -1,10 +1,5 @@
 discount_r <- 0.03
 
-ms_cov_all <- read_rds("~/GitHub/covid_vac_africa/data/intermediate/ms_cov_all.rds")
-
-ms_scenarios <- read_rds("~/GitHub/covid_vac_africa/data/intermediate/ms_scenarios.rds") %>%
-  rownames_to_column(var = "scenario_id")
-
 ms_cov_all %>% 
   left_join(vac_denom, by = "iso3c") %>% 
   mutate(year_end1 = ymd("2021-12-31"),

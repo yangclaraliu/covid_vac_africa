@@ -273,6 +273,10 @@ custom_theme <- theme(
 source("code/1_fitting_check.R")
 source("code/0_7_define_vac_rate.R")
 
+ms_cov_all <- read_rds("~/GitHub/covid_vac_africa/data/intermediate/ms_cov_all.rds")
+ms_scenarios <- read_rds("~/GitHub/covid_vac_africa/data/intermediate/ms_scenarios.rds") %>%
+  rownames_to_column(var = "scenario_id")
+
 source("code/2_1_draw_comparison.R")
 source("code/3_1_tallying_cost.R")
 
