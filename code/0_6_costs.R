@@ -33,7 +33,11 @@ readxl::read_excel(paste0(path_dropbox,
                           "COVID care unit cost - Africa.xlsx"),
                    sheet = 1) %>% 
   .[-c(1:4),c(1,11:14)] %>% 
-  setNames(c("cn", "home", "hosp", "icu", "deaths")) -> cost_care
+  setNames(c("cn", "home", "hosp", "icu", "deaths")) %>% 
+  mutate(home = as.numeric(home)*(108.596 / 107.303),
+         hosp = as.numeric(hosp)*(108.596 / 107.303),
+         icu =  as.numeric(icu)*(108.596 / 107.303),
+         deaths = as.numeric(deaths)*(108.596 / 107.303))-> cost_care
 
 cost_care[cost_care$cn == "Egypt, Arab Rep.","cn"] <- "Egypt"
 cost_care[cost_care$cn == "Congo, Dem. Rep.","cn"] <- "Dem. Republic of the Congo"

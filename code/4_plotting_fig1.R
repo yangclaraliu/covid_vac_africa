@@ -10,6 +10,19 @@ shape %>%
         legend.justification = "center") +
   labs(fill = "") -> p_map
 
+# shape %>%
+#   mutate(fit = if_else(ISO3_CODE %in% fitted_table$iso3c, "Included", "Excluded")) %>%
+#   st_as_sf() %>%
+#   ggplot(.) +
+#   geom_sf(aes(fill = fit), color = "black", size = 0.3, alpha = 0.7) +
+#   coord_sf(xlim = c(-30, 60), ylim = c(-40, 40), expand = FALSE) +
+#   theme_map() +
+#   scale_fill_manual(values = c("white","#0D5257")) +
+#   theme(legend.position = "top",
+#         legend.justification = "center") +
+#   labs(fill = "") -> p_map
+# ggsave("figs/ISPH_fig2.png")
+
 VE_4plot <- read_csv("data/VE_base.csv") %>% 
   mutate(dose = factor(dose),
          outcome = factor(outcome,
@@ -19,21 +32,21 @@ VE_4plot <- read_csv("data/VE_base.csv") %>%
                                      "Non-ICU hospital admission",
                                      "ICU admission",
                                      "Mortality"),
-                          labels = c("Onward\nTransmission",
+                          labels = c("Onward\ntransmission",
                                      "Infection",
                                      "Disease",
-                                     "Severe\nCase",
-                                     "Critical\nCase",
+                                     "Severe\ncase",
+                                     "Critical\ncase",
                                      "Mortality")),
          Type = factor(Type,
                        levels = c("viral vector","mRNA"),
-                       labels = c("Viral Vector Vaccines",
-                                  "mRNA Vaccines")))
+                       labels = c("Viral vector vaccines",
+                                  "mRNA vaccines")))
 
 VE_4plot %>% 
   # filter(Type == "mRNA", outcome == "Infection")
   ggplot(., aes(x = value, y = outcome, color = Type)) +
-  geom_text(aes(label = dose), fontface = "bold") +
+  geom_text(aes(label = dose, show_guide = T), fontface = "bold", size = 6) +
   # ggplot(., aes(x = dose, y = value, color = Type)) +
   # geom_point(aes(pch = outcome)) +
   # geom_line(aes(linetype = outcome, group = interaction(Type, outcome))) +
@@ -43,11 +56,14 @@ VE_4plot %>%
   theme_bw() +
   theme(# axis.text.x = element_text(angle = 90),
         legend.position = "none") +
-  labs(y = "Vaccine Effect Target",
-       x = "Vaccine Efficacy",
-       color = "Vaccine Type") +
+  labs(y = "Disease outcomes",
+       x = "Vaccine effectiveness",
+       color = "Vaccine type") +
   custom_theme +
   scale_y_discrete(limits = rev) -> p_VE
+
+p_VE_legend <- get_legend(p_VE + theme(legend.position = "right"))
+plot(p_VE_legend)
 
 ms_cov_all %>% 
   left_join(vac_denom, by = "iso3c") %>% 
@@ -63,11 +79,11 @@ ms_cov_all %>%
          cov_achieved_diff1_dose2 = days_diff1_dose2 *r_vac,
          cov_achieved_diff2_dose1 = days_diff2_dose1 *r_vac,
          cov_achieved_diff2_dose2 = days_diff2_dose2 *r_vac,
-         cov_achieved_diff2_dose1 = if_else(cov_achieved_diff1_dose1 + cov_achieved_diff2_dose1 > 0.6,
-                                            0.6 - cov_achieved_diff1_dose1,
+         cov_achieved_diff2_dose1 = if_else(cov_achieved_diff1_dose1 + cov_achieved_diff2_dose1 > 0.7,
+                                            0.7 - cov_achieved_diff1_dose1,
                                             cov_achieved_diff2_dose1),
-         cov_achieved_diff2_dose2 = if_else(cov_achieved_diff1_dose2 + cov_achieved_diff2_dose2 > 0.6,
-                                            0.6 - cov_achieved_diff1_dose2,
+         cov_achieved_diff2_dose2 = if_else(cov_achieved_diff1_dose2 + cov_achieved_diff2_dose2 > 0.7,
+                                            0.7 - cov_achieved_diff1_dose2,
                                             cov_achieved_diff2_dose2),
          year1_doses = (cov_achieved_diff1_dose1 + cov_achieved_diff1_dose2)*tot*1000,
          year2_doses = (cov_achieved_diff2_dose1 + cov_achieved_diff2_dose2)*tot*1000,
@@ -79,8 +95,8 @@ ms_cov_all %>%
   mutate(Type = tolower(Type),
          Type = factor(Type,
                        levels = c("az","pfizer"),
-                       labels = c("Viral Vector Vaccines",
-                                  "mRNA Vaccines"))) %>% 
+                       labels = c("Viral vector vaccines",
+                                  "mRNA vaccines"))) %>% 
   filter(date_start == "2021-07-01", scenario == "medium") %>% 
   ggplot(., aes(x = vac_unit, y = Type, color = Type)) +
   geom_boxplot() +
@@ -88,10 +104,49 @@ ms_cov_all %>%
   theme_bw() +
   theme(# axis.text.x = element_text(angle = 90),
         legend.position = "none") +
-  labs(y = "Vaccine Type",
-       x = "Vaccine Unit Cost (USD$2020)",
-       color = "Dose Number") +
+  labs(y = "Vaccine type",
+       x = "Vaccine unit cost (USD$2020)",
+       color = "Dose number") +
   custom_theme -> p_vac_cost
+
+ms_cov_all %>% 
+  left_join(vac_denom, by = "iso3c") %>% 
+  mutate(year_end1 = ymd("2021-12-31"),
+         year_end2 = ymd("2022-12-31"),
+         days_diff1_dose1 = as.numeric(year_end1 - date_start),
+         days_diff1_dose2 = as.numeric(year_end1 - date_start) - 28,
+         days_diff2_dose1 = as.numeric(year_end2 - date_start),
+         days_diff2_dose2 = as.numeric(year_end2 - date_start) - 28,
+         days_diff2_dose1 = days_diff2_dose1 - days_diff1_dose1,
+         days_diff2_dose2 = days_diff2_dose2 - days_diff1_dose2,
+         cov_achieved_diff1_dose1 = days_diff1_dose1 *r_vac,
+         cov_achieved_diff1_dose2 = days_diff1_dose2 *r_vac,
+         cov_achieved_diff2_dose1 = days_diff2_dose1 *r_vac,
+         cov_achieved_diff2_dose2 = days_diff2_dose2 *r_vac,
+         cov_achieved_diff2_dose1 = if_else(cov_achieved_diff1_dose1 + cov_achieved_diff2_dose1 > 0.7,
+                                            0.7 - cov_achieved_diff1_dose1,
+                                            cov_achieved_diff2_dose1),
+         cov_achieved_diff2_dose2 = if_else(cov_achieved_diff1_dose2 + cov_achieved_diff2_dose2 > 0.7,
+                                            0.7 - cov_achieved_diff1_dose2,
+                                            cov_achieved_diff2_dose2),
+         year1_doses = (cov_achieved_diff1_dose1 + cov_achieved_diff1_dose2)*tot*1000,
+         year2_doses = (cov_achieved_diff2_dose1 + cov_achieved_diff2_dose2)*tot*1000,
+         vac_unit_disc = vac_unit/((1+discount_r)),
+         vac_cost = year1_doses*vac_unit + year2_doses*(vac_unit_disc)) %>%
+  # dplyr::select(date_start, scenario, Type, name, iso3c, r_vac, Rate, vac_cost) %>% 
+  # dplyr::select(date_start, Type, scenario, name, iso3c, vac_cost) %>% 
+  rename(population = name) %>% 
+  mutate(Type = tolower(Type),
+         Type = factor(Type,
+                       levels = c("az","pfizer"),
+                       labels = c("Viral vector vaccines",
+                                  "mRNA vaccines"))) %>% 
+  filter(date_start == "2021-07-01", scenario == "medium") %>% 
+  dplyr::select(Type, iso3c, vac_unit) %>% 
+  pivot_wider(names_from = Type, values_from = vac_unit) %>% 
+  mutate(loc = countrycode(iso3c, "iso3c", "country.name")) %>% 
+  .[,c(4,1,2,3)] %>% 
+  write_csv("data/vac_price.csv")
 
 cost_care %>% 
   mutate_at(vars(c("home", "hosp", "icu", "deaths")), as.numeric) %>% 
@@ -101,18 +156,20 @@ cost_care %>%
   pivot_longer(cols = c("home", "deaths", "severe", "critical")) %>% 
   mutate(name = factor(name,
                        levels = c("home", "severe", "critical", "deaths"),
-                       labels = c("Home-based Care",
-                                  "Hospital-based Care for Severe Cases",
-                                  "Hospital-based Case for Critical Cases",
+                       labels = c("Home-based care",
+                                  "Hospital-based care\nfor severe cases",
+                                  "Hospital-based care\nfor critical cases",
                                   "Deaths"))) %>% 
   ggplot(., aes(x = log(value, base = 10), y = name)) +
   geom_density_ridges(fill = "white", scale = 0.95) +
   # scale_x_log10(labels = function(x) format(x, scientific = TRUE)) +
   scale_y_discrete(limits = rev) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5), 
+                     labels = c("$10","$100","$1K","$10K","$100K")) +
   theme_bw() +
   custom_theme +
-  labs(y = "Case Management",
-       x = "Health Care Costs per Patient\n(USD$2020, log10-transformed)") -> p_hc_cost
+  labs(y = "Case management",
+       x = "Health care costs per patient\n(USD$2020, log10-transformed)") -> p_hc_cost
   
 
 ms_scenarios %>% 
@@ -126,9 +183,9 @@ ms_scenarios %>%
   geom_segment(aes(x = date_vac_end, xend = ymd(sim_end), y = 0.7, yend = 0.7, color = scenario), size = 0.3) +
   scale_color_futurama() +
   theme_bw() +
-  labs(x = "Vaccination Program Starting Date",
-       y = "Vaccine Coverage\n(two-dose)",
-       color = "Vaccine Roll-out Rate") +
+  labs(x = "Vaccination program start date",
+       y = "Vaccine coverage\n(two-dose, assumed)",
+       color = "Vaccine roll-out rate") +
   theme(legend.position = "top") +
   custom_theme +
   lims(y = c(0,1)) -> p_ro_scenarios
@@ -165,8 +222,8 @@ tmp %>% bind_rows() %>%
   theme_bw() +
   theme(legend.position = "top") +
   labs(x = "Date",
-       y = "Cumulative Doses\n(per person)",
-       color = "Vaccine Roll-out Rate Level") +
+       y = "Vaccine coverage\n(two-dose, observed)",
+       color = "Vaccine roll-out rate level") +
   ggsci::scale_color_futurama() +
   custom_theme -> p_ro_empirical
 
@@ -174,13 +231,13 @@ tmp %>% bind_rows() %>%
 legend1 <- get_legend(p_ro_scenarios)
 legend2 <- get_legend(p_vac_cost + 
                         theme(legend.position = "top") + 
-                        labs(color = "Vaccine Type") )
+                        labs(color = "Vaccine type") )
 
 p1 <- plot_grid(p_ro_empirical + theme(legend.position = "none"), 
                 p_ro_scenarios + theme(legend.position = "none"),
                 nrow = 1,
                 rel_widths = c(2,2),
-                labels = c("         (a)", 
+                labels = c("            (a)", 
                            "            (b)"),
                 align = "h")
 
@@ -221,6 +278,6 @@ p3 <- plot_grid(legend1,
 
 p5 <- plot_grid(p1, 
                 plot_grid(p2, p3, ncol = 2, rel_widths = c(4,3)), 
-                ncol = 1, rel_heights = c(3,8))
+                ncol = 1, rel_heights = c(4,8))
 
-ggsave("figs/fig1.png", p5, width = 15, height = 10)
+ggsave("figs/fig1.png", p5, width = 15, height = 12)

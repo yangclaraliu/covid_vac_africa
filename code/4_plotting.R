@@ -58,7 +58,7 @@ owid_vac %>%
               summarise(tot = (sum(f) + sum(m))*1000),
             by = "iso3c") %>% 
   mutate(cov = people_fully_vaccinated/tot) %>%
-  filter(cov >= 0) %>% 
+  filter(cov >= 0.01) %>% 
   group_by(iso3c) %>% 
   mutate(date_min = min(date)) %>% 
   filter(date == date_min) %>% 
@@ -85,8 +85,8 @@ owid_vac %>%
   ggplot(., aes(x = date, y = Estimate,
                 # fill = log(burden), 
                 size = (tot)/1000000)) +
-  geom_point(pch = 21, stroke = 1.4) +
-  geom_hline(yintercept = speed_median$vac_rate_per_million, linetype = 2) +
+  geom_point(color = "#0D5257", alpha = 0.5) +
+  # geom_hline(yintercept = speed_median$vac_rate_per_million, linetype = 2) +
   # scale_size(
   #   breaks = c(1:10),
   #   range = c(1,10)
@@ -97,6 +97,8 @@ owid_vac %>%
   labs(size = "Population Size (million)", x = "First Day with Proportion of Population\n Fully Covered by Vaccine Exceed 1%", y = "Doses Administered/ Million Population-Day") +
   theme(legend.position = "top") +
   lims(x = c(ymd("2021-01-01", "2021-12-31")))
+
+ggsave("figs/ISPH_fig1.png", width = 7, height = 5)
 
 owid_epi %>% 
   group_by(iso3c) %>% 

@@ -1,4 +1,13 @@
 owid_vac %>% 
+  dplyr::select(location, iso3c, date, people_fully_vaccinated_per_hundred ) %>% 
+  filter(!is.na(people_fully_vaccinated_per_hundred )) %>% 
+  filter(people_fully_vaccinated_per_hundred > 1) %>% 
+  group_by(iso3c) %>% mutate(date_min = min(date)) %>% 
+  filter(date == date_min) %>% 
+  pull(date_min) %>% summary
+  
+
+owid_vac %>% 
   dplyr::select(iso3c, date, daily_vaccinations_per_million) %>% 
   filter(!is.na(daily_vaccinations_per_million)) %>% 
   group_by(iso3c) %>% group_split() %>% map(~replace(., is.na(.), 0)) %>% 

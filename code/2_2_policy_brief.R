@@ -506,8 +506,8 @@ predict(model_cost_vaccines,
 
 pre_tab_current %>% 
   left_join(vac_denom, by = "iso3c") %>% 
-  mutate(vac_cost_az = cov_ms2*tot*1000*vac_unit_cost_az1 + (cov_ms3 - cov_ms2)*tot*1000*vac_unit_cost_az2,
-         vac_cost_pf = cov_ms2*tot*1000*vac_unit_cost_pf1 + (cov_ms3 - cov_ms2)*tot*1000*vac_unit_cost_pf2) %>% 
+  mutate(vac_cost_az = cov_ms2*tot*1000*vac_unit_cost_az1*2 + (cov_ms3 - cov_ms2)*tot*1000*vac_unit_cost_az2*2,
+         vac_cost_pf = cov_ms2*tot*1000*vac_unit_cost_pf1*2 + (cov_ms3 - cov_ms2)*tot*1000*vac_unit_cost_pf2*2) %>% 
   dplyr::select(iso3c, vac_cost_az , vac_cost_pf) %>% 
   pivot_longer(cols = starts_with("vac"),
                names_to = "Type") %>% 
@@ -740,7 +740,9 @@ ICER_who %>%
               rename(ICER_current = ICER_scaled),
             by = c("iso3c", "Type")) %>% 
   mutate(better = ICER_current < ICER_who,
-         trans = ICER_current < 0.5 & ICER_who > 0.5) %>% 
+         
+         trans = (ICER_current < 0.5 & ICER_who > 0.5)|(ICER_current > 0.5 & ICER_who < 0.5)) %>% 
+  filter(trans == T)
   mutate(CE_who = ICER_who < 0.5, CE_current = ICER_current < 0.5)  %>% group_by(Type) %>% summarise(who = sum(CE_who), current = sum(CE_current))
   
   pivot_longer(cols = starts_with("ICER", ignore.case = F)) %>% 
@@ -766,4 +768,51 @@ ICER_who %>%
 
 ggsave("figs/policy_brief_fig1.png", width = 10, height = 5)
 
+impact_pb$who %>% bind_rows(.id = "Type") %>% mutate(version = "who") %>% 
+  bind_rows(impact_pb$current %>% bind_rows(.id = "Type") %>% mutate(version = "current")) %>% 
+  dplyr::select(version, dalys, epi_id, econ_id, country, Type) %>%
+  distinct() %>% 
+  pivot_wider(names_from = version,
+              values_from = dalys) %>% 
+  filter(econ_id == 1) %>% 
+  .[,3:6] %>% 
+  group_by(Type) %>% 
+  group_split() -> tmp
 
+tmp[[1]] %>% 
+  left_join(tmp[[2]] %>% 
+              dplyr::select(-current, -Type) %>% 
+              rename(novac = who),
+            by = "country") %>% 
+  bind_rows(tmp[[3]] %>% 
+              left_join(tmp[[2]] %>% 
+                          dplyr::select(-current, -Type) %>% 
+                          rename(novac = who),
+                        by = "country")) %>% 
+  mutate(who_reduction = (novac - who)/novac,
+         rr = who/current,
+         current_reduction = (novac - current)/novac,
+         Type = factor(Type,
+                       levels = c("az","pfizer"),
+                       labels = c("Viral Vector Vaccines",
+                                  "mRNA Vaccines"))) %>% 
+  # dplyr::select(-who, -current, -novac) %>%
+  rename(iso3c = country) %>% 
+  left_join(ms_current[,c("iso3c","cov_daily")], by = "iso3c") %>% 
+  ggplot(., aes(x = current_reduction, y = who_reduction, fill = cov_daily)) +
+  geom_point(aes(pch = Type), size = 4, alpha = 0.9) +
+  scale_shape_manual(values = c(21,24))+
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  theme_bw() +
+  viridis::scale_fill_viridis(option = "mako") +
+  labs(shape = "Vaccine Type",
+       fill = "Daily Vaccination Rate(%)",
+       x = "Proportion DALYs Reduction incurred given current efforts",
+       y = "Proportion DALYs Reduction incurred given coverage targets") +
+  theme(legend.position = "top",
+        legend.key.width = unit(2, "cm"),
+        legend.box = "vertical") +
+  custom_theme +
+  guides(linetype = guide_legend(nrow = 2)) 
+
+ggsave("figs/policy_brief_fig3.png", width = 10, height = 10)

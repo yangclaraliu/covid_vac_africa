@@ -1,7 +1,7 @@
 require(pacman)
 p_load(tidyverse, sf, data.table, countrycode, mgcv,
        magrittr, testthat, ISOcodes, cowplot, ggsci,
-       ggridges)
+       ggridges, spdep, janitor)
 
 path_dropbox <- "C:/Users/eideyliu/Dropbox/Github_Data/COVID-19_africa_cdc/"
 
