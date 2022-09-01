@@ -28,7 +28,8 @@ compile_ICER_by_threshold <- function(GDP_p, vac_type){
               by = c("scenario_id",
                      "econ_id",
                      "iso3c" = "country")) %>% 
-    left_join(ms_scenarios, by = "scenario_id") %>% 
+    left_join(ms_scenarios |> 
+                rownames_to_column(var = "scenario_id"), by = "scenario_id") %>% 
     # filter(econ_id == 1) %>% 
     mutate(diff_health = dalys_novac - dalys,
            diff_cost = tot_cost- tot_cost_novac,
@@ -45,8 +46,7 @@ ICER[["pf_03"]] <- compile_ICER_by_threshold(GDP_p = 0.3, vac_type = "pfizer")
 ICER[["pf_05"]] <- compile_ICER_by_threshold(GDP_p = 0.5, vac_type = "pfizer")
 ICER[["pf_10"]] <- compile_ICER_by_threshold(GDP_p = 1, vac_type = "pfizer")
 
- 
-# ICER$az %>%
+ # ICER$az %>%
 #   group_by(scenario_id, econ_id) %>%
 #   mutate(GDP_rank = rank(GDPPC_2020_USD),
 #          GDP_label = paste0(GDP_rank, "_",iso3c)) -> tmp

@@ -60,9 +60,9 @@ build_base <- function(brand = NULL,
   return(tmp)
 }
 
-# base <- list()
-# base[["pfizer"]] <- build_base("pfizer")
-# base[["az"]] <- build_base("az")
+base <- list()
+base[["pfizer"]] <- build_base("pfizer")
+base[["az"]] <- build_base("az")
 # base[["pfizer_ext"]] <- build_base("pfizer", sim_end = "2023-06-30")
 # base[["az_ext"]] <- build_base("az", sim_end = "2023-06-30")
 
@@ -125,23 +125,23 @@ compile_base <- function(param_set){
   res_tmp <- list()
   
   res_tmp[[1]] <- tmp[[1]] %>% 
-    group_by(population, iso3c, year, name) %>% 
+    group_by(population, iso3c, year, name, group) %>% 
     summarise(value = sum(value))
   
   res_tmp[[2]] <- tmp[[2]] %>% 
-    group_by(population, year, name, group) %>% 
+    group_by(population, iso3c, year, name, group) %>% 
     summarise(novac = sum(value))
   
   return(res_tmp)
 }
 
-# res_novac <- list()
-# res_novac[["pfizer"]] <- compile_base(base$pfizer)
-# res_novac[["az"]] <- compile_base(base$az)
+res_novac <- list()
+res_novac[["pfizer"]] <- compile_base(base$pfizer)
+res_novac[["az"]] <- compile_base(base$az)
 # res_novac[["pfizer_ext"]] <- compile_base(base$pfizer_ext)
 # res_novac[["az_ext"]] <- compile_base(base$az_ext)
 
-# write_rds(res_novac, "data/intermediate/res_novac.rds")
+write_rds(res_novac, "data/intermediate/res_novac_grouped.rds")
 
 # res_novac <- list()
 # for(j in 1:length(params_step1)){
@@ -253,7 +253,7 @@ compile_strategy <- function(param_set,
       
       df[[j]][[i]] <- list()
       res_tmp[[1]] %>% 
-        group_by(population, year, name) %>% 
+        group_by(population, year, name, group) %>% 
         summarise(value = sum(value)) -> df[[j]][[i]][["non_fatal"]]
       
       res_tmp[[2]] %>% 
@@ -262,18 +262,18 @@ compile_strategy <- function(param_set,
       
       print(paste0(fitted_table$iso3c[j], ", ", i))
     }
-    write_rds(df, paste0("data/intermediate/", fn, ".rds"))
+    write_rds(df, paste0("data/intermediate/", fn, "_grouped.rds"))
   }
 }
 
-# compile_strategy(base$pfizer, fn = "params_grid_pfizer_70")
-# compile_strategy(base$az, fn = "params_grid_az_70")
+compile_strategy(base$pfizer, fn = "params_grid_pfizer_70")
+compile_strategy(base$az, fn = "params_grid_az_70")
 
 # compile_strategy(base$pfizer_ext, fn = "params_grid_pfizer_70_ext")
 # compile_strategy(base$az_ext, fn = "params_grid_az_70_ext")
 
-compile_strategy(base_low$pfizer, fn = "params_grid_pfizer_70_low")
-compile_strategy(base_low$az, fn = "params_grid_az_70_low")
+# compile_strategy(base_low$pfizer, fn = "params_grid_pfizer_70_low")
+# compile_strategy(base_low$az, fn = "params_grid_az_70_low")
 
 # res %>% 
 #   map(bind_rows, .id = "ms_cov_index") %>% 

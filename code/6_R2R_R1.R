@@ -82,3 +82,13 @@ p_table  |>
 ggsave(filename = "figs/R2R_R1/outcome_adjusted_vv.png",
        plot = p_tmp,
        width = 20, height = 10)
+
+##### can we say some programs are better because of the marginal ICER thing? #####
+ICER$az_03 |> 
+  dplyr::select(scenario_id, econ_id, iso3c, Type, scenario, date_start,
+                GDPPC_2020_USD, ICER, ICER_scaled) |> 
+  bind_rows(ICER$pf_03 |> 
+              dplyr::select(scenario_id, econ_id, iso3c, Type, scenario, date_start,
+                            GDPPC_2020_USD, ICER, ICER_scaled)) -> ICER_res
+
+res
