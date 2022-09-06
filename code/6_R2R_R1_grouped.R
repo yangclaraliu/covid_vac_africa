@@ -281,8 +281,9 @@ ICER$az_03 |>
                               ICER_scaled >= 0.3 & ICER_scaled < 0.5 ~ 3,
                               ICER_scaled >= 0.5 & ICER_scaled < 1 ~ 4,
                               ICER_scaled >= 1 ~ 5)) |> 
-  select(-ICER_scaled) |> 
-  pivot_wider(names_from = scenario, values_from = ICER_cat) |> 
+  # select(-ICER_scaled) |> 
+  select(-ICER_cat) |> 
+  pivot_wider(names_from = scenario, values_from = ICER_scaled) |> 
   mutate(check = case_when(medium < fast ~ "1",
                            medium == fast ~ "2",
                            medium > fast ~ "3")) -> bar_met
@@ -317,23 +318,35 @@ t1 <- t.test(data_test[data_test$check == "1", ]$fast,
              data_test[data_test$check == "1", ]$medium, 
              paired = T, 
              alternative = "two.sided")
-t2 <- t.test(data_test[data_test$check == "2", ]$fast, 
-             data_test[data_test$check == "2", ]$medium, 
-             paired = T, 
-             alternative = "two.sided")
+# t2 <- t.test(data_test[data_test$check == "2", ]$fast, 
+#              data_test[data_test$check == "2", ]$medium, 
+#              paired = T, 
+#              alternative = "two.sided")
 t3 <- t.test(data_test[data_test$check == "3", ]$fast, 
              data_test[data_test$check == "3", ]$medium, 
              paired = T, 
              alternative = "two.sided")
 
-data.frame(mean = c(t1$estimate,t2$estimate,), 
-           LL = c(t1$conf.int[1],t2$conf.int[1]),
-           UL = c(t1$conf.int[2],t2$conf.int[2]),
-           lab = c("(A)", "(B)")) |> 
+data.frame(mean = c(t1$estimate,
+                    #t2$estimate,
+                    t3$estimate), 
+           LL = c(t1$conf.int[1],
+                  #t2$conf.int[1],
+                  t3$conf.int[1]),
+           UL = c(t1$conf.int[2],
+                  #t2$conf.int[2],
+                  t3$conf.int[2]),
+           lab = c("ICER_medium < ICER_fast", 
+                   "ICER_medium > ICER_fast")) |> 
   ggplot() +
-  geom_point(aes(x = lab, y = mean)) +
+  geom_point(aes(x = lab, y = mean), size = 3) +
   geom_segment(aes(x = lab, xend = lab,
-                   y = LL, yend = UL)) +
+                   y = LL, yend = UL), size = 1.5) +
   theme_bw() +
-  custom_theme
-  
+  custom_theme +
+  labs(x = "",
+       y = "Differences in proportions DALY loss saved") +
+  scale_x_discrete(labels = parse(text = c("ICER[medium] < ICER[fast]",
+                                           "ICER[medium] > ICER[fast]")))
+
+ggsave("figs/R2R_R1/ICER_grouped.png", width = 9, height = 6)  

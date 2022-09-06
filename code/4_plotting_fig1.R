@@ -1,14 +1,20 @@
 shape %>%
   mutate(fit = if_else(ISO3_CODE %in% fitted_table$iso3c, "Included", "Excluded")) %>%
-  st_as_sf() %>%
-  ggplot(.) +
+  st_as_sf() |> 
+  st_crop(shape_africa, 
+          xmin = -30, xmax = 60, 
+          ymin = -40, ymax = 40) -> shape_africa
+
+ggplot(shape_africa) +
   geom_sf(aes(fill = fit), color = "black", size = 0.3) +
-  coord_sf(xlim = c(-30, 60), ylim = c(-40, 40), expand = FALSE) +
   theme_map() +
   scale_fill_manual(values = c("white","grey")) +
   theme(legend.position = "top",
         legend.justification = "center") +
-  labs(fill = "") -> p_map
+  labs(fill = "") #-> p_map
+
+ggsave("figs/R2R_R1/p_map_appendix.png",
+       width = 6, height = 10)
 
 # shape %>%
 #   mutate(fit = if_else(ISO3_CODE %in% fitted_table$iso3c, "Included", "Excluded")) %>%
@@ -237,8 +243,8 @@ p1 <- plot_grid(p_ro_empirical + theme(legend.position = "none"),
                 p_ro_scenarios + theme(legend.position = "none"),
                 nrow = 1,
                 rel_widths = c(2,2),
-                labels = c("            (a)", 
-                           "            (b)"),
+                labels = c("\n            (a)", 
+                           "\n            (b)"),
                 align = "h")
 
 
@@ -280,4 +286,6 @@ p5 <- plot_grid(p1,
                 plot_grid(p2, p3, ncol = 2, rel_widths = c(4,3)), 
                 ncol = 1, rel_heights = c(4,8))
 
-ggsave("figs/fig1.png", p5, width = 15, height = 12)
+# ggsave("figs/fig1.png", p5, width = 15, height = 12)
+ggsave("figs/R2R_R1/fig1_R1.png",
+       width = 10, height = 5)

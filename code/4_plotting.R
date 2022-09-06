@@ -161,3 +161,38 @@ ms_cov_all %>%
 
 ggsave("figs/model_vaccine_price.png", width = 20, height = 10)
 
+fitted_table |> 
+  ggplot(aes(x = r)) +
+  geom_density() +
+  theme_cowplot() +
+  custom_theme +
+  labs(x = "[1] Basic Reproduction Number",
+       y = "Probability Density") -> p_1
+
+fitted_table |> 
+  ggplot(aes(x = t_intro)) +
+  geom_density() +
+  theme_cowplot() +
+  custom_theme +
+  labs(x = "[2] Infection Introduction Date",
+       y = "Probability Density") -> p_2
+
+fitted_table |> 
+  ggplot(aes(x = rr)) +
+  geom_density() +
+  theme_cowplot() +
+  custom_theme +
+  labs(x = "[3] Reporting Probability",
+       y = "Probability Density") -> p_3
+
+fitted_table |> 
+  filter(t_intro_voc1 == "2021-01-15") |> 
+  ggplot(aes(x = t_intro_voc2)) +
+  geom_density() +
+  theme_cowplot() +
+  custom_theme +
+  labs(x = "[4] Variants of Concern Transition Time",
+       y = "Probability Density") -> p_4
+
+plot_grid(p_1, p_2, p_3, p_4, ncol = 2)
+ggsave("figs/R2R_R1/fitted_values.png", width = 15, height = 8)
