@@ -1,4 +1,4 @@
->#### SA windows ####
+#### SA windows ####
 point_size = 2.5
 point_alpha = 0.8
 ICER_all <- readRDS("~/GitHub/covid_vac_africa/data/intermediate/ICER_all.rds")

@@ -61,3 +61,22 @@ paste0(path_dropbox, "API_SH.XPD.GHED.PC.CD_DS2_en_excel_v2_3758786.xlsx") %>%
   dplyr::select(iso3c, `2019`) %>% 
   left_join(vac_denom, by = "iso3c") %>% 
   mutate(hc_expenditure = tot*1000*as.numeric(`2019`)*(108.596 / 107.303)) -> cost_hc_expenditure_GHED
+
+# cost_hc_expenditure_GHED |> 
+#   left_join(GDPPC, by = c("iso3c" = "country")) |> 
+#   filter(iso3c %in% fitted_table$iso3c) |> 
+#   mutate(CMR = if_else(iso3c == "CMR", T, F)) |> 
+#   ggplot(aes(x = GDPPC_2020_USD,
+#              y = hc_expenditure)) +
+#   geom_point(aes(color = CMR), size = 4) +
+#   scale_color_manual(breaks = c(T,F),values = c("red","black")) +
+#   theme_cowplot() +
+#   custom_theme +
+#   theme(legend.position = "none") +
+#   scale_x_log10() +
+#   scale_y_log10() +
+#   # geom_smooth(method = "lm") +
+#   labs(x = "GDP per capita",
+#        y = "Government General Health Expenditure") 
+# 
+# ggsave("figs/R2R_R1/GDPpc_GHE.png", width = 12, height = 10)

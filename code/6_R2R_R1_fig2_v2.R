@@ -8,8 +8,8 @@ res$az %>%
   summarise(value = sum(value),
             novac = sum(novac)) %>%
   filter(!grepl("_p_", name)) %>%
-  left_join(ms_scenarios %>%
-            rownames_to_column(var = "scenario_id"),
+  left_join(ms_scenarios, # %>%
+            # rownames_to_column(var = "scenario_id"),
             by = "scenario_id") %>%
   mutate(scenario = factor(scenario,
                            levels = c("slow", "medium", "fast"),

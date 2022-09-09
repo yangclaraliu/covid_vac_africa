@@ -269,7 +269,8 @@ custom_theme <- theme(
   legend.text = element_text(size = 14),
   legend.title = element_text(size = 14)
 )
-# fitted_table <- read_rds("data/intermediate/fitted_table.rds")
+
+fitted_table <- read_rds("data/intermediate/fitted_table.rds")
 source("code/1_fitting_check.R")
 source("code/0_7_define_vac_rate.R")
 

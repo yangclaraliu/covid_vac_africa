@@ -1,3 +1,5 @@
+
+impact <- readRDS("~/GitHub/covid_vac_africa/data/intermediate/impact.rds")
 tab <- list()
 
 cost_all %>% 
@@ -28,8 +30,9 @@ compile_ICER_by_threshold <- function(GDP_p, vac_type){
               by = c("scenario_id",
                      "econ_id",
                      "iso3c" = "country")) %>% 
-    left_join(ms_scenarios |> 
-                rownames_to_column(var = "scenario_id"), by = "scenario_id") %>% 
+    left_join(ms_scenarios,#  |> 
+                # rownames_to_column(var = "scenario_id"), 
+              by = "scenario_id") %>% 
     # filter(econ_id == 1) %>% 
     mutate(diff_health = dalys_novac - dalys,
            diff_cost = tot_cost- tot_cost_novac,
@@ -205,6 +208,7 @@ ICER$az_05 %>%
          date_start = factor(date_start)) %>% 
   filter(!is.na(affordability)) %>% 
   mutate(date_start = factor(date_start)) %>% 
+  filter(affordability > 1 & ICER_scaled < 0.5)
   # mutate(date_start = ymd(date_start)) %>% 
   # filter(date_start == "2021-02-01", !is.na(affordability)) %>% 
   # ggplot(., aes(x = affordability, y = scenario,  
@@ -212,11 +216,12 @@ ICER$az_05 %>%
   #               color = scenario)) +
   ggplot(., aes(x = affordability, y = date_start,
                 color = scenario, fill = scenario)) +
+  geom_point() +
   # geom_density_ridges(alpha = 0.01) +
   # geom_histogram() +
-  geom_density_ridges(alpha = 0.5, scale = 0.95, stat = "binline", binwidth = 0.02) +
+  # geom_density_ridges(alpha = 0.5, scale = 0.95, stat = "binline", binwidth = 0.02) +
   # geom_density(alpha = 0.1) +
-  # facet_grid(scenario~Type) +
+  facet_grid(scenario~Type) +
   # facet_grid( ~ Type, scales = "free") +
   facet_grid(scenario ~ Type) +
   theme_bw() +
