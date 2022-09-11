@@ -133,8 +133,9 @@ tab[["pf"]] %>%
 
 tmp |> 
   bind_rows(.id = "Type") |> 
-  filter(date_start == "2021-08-01", scenario == "medium") |> 
-  dplyr::select(starts_with("price_reduction") & ends_with("_vac"), Type) |> 
+  # filter(date_start == "2021-08-01") |> 
+  filter(econ_id == 1) |> 
+  dplyr::select(starts_with("price_reduction") & ends_with("_vac"), Type, scenario, date_start) |> 
   pivot_longer(cols = starts_with("price")) |> 
   mutate(name = parse_number(name)/10,
          name = factor(name, levels = seq(0.1,0.5,0.1)),
@@ -143,19 +144,29 @@ tmp |>
                        labels = c("Viral vector vaccines",
                                   "mRNA vaccines"))) |>
   group_by(Type, name) |> 
-  mutate(value_md = median(value)) |> 
+  mutate(value_md = median(value),
+         value_mu = mean(value)) |> 
+  ungroup() |> 
+  dplyr::select(Type, name, date_start, scenario, value_md, value_mu) |>
+  distinct() |>
+  group_by(Type) |> group_split() |> map(pull, value_mu) |> map(range)
+  
   ggplot() +
   geom_density(aes(x = value, group = name, color = name)) +
-  geom_vline(aes(xintercept = value_md,
+  geom_vline(aes(xintercept = value_mu,
                  color = name),
-             linetype = 2) +
-  facet_wrap(~Type, scales = "free") +
+             linetype = 2,
+             size = 2) +
+  facet_wrap(~Type, scales = "free", ncol = 1) +
   theme_cowplot() +
   custom_theme +
   labs(y = "Density",
        x = "% reduction in vaccine unit costs required",
-       color = "Target willingness-to-pay thresholds",
-       title = "Start date = 2021-08-01, Roll-out rate = medium") +
+       color = "Mean % reduction in vaccine unit costs required\ntargeting different willingness-to-pay thresholds",
+       title = "Start date = pooled, Roll-out rate = pooled"
+       ) +
   theme(legend.position = "top") +
-  scale_color_futurama()
+  scale_color_lancet()
 
+ggsave("figs/R2R_R1/target_price_reduction_all.png",
+       width = 10, height = 10)

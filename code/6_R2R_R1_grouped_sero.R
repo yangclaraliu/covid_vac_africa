@@ -98,63 +98,63 @@ cov_list <- c("pop","p_OA", "sero","vac_unit", "hc_expenditure", "`Income Group`
 f_cat <- paste("ICER_cat ~ ", cov_list) |> map(formula)
 f_con <- paste("ICER_scaled ~ ", cov_list) |> map(formula)
 
-pop |> 
-  separate(age, into = c("age_LL", "age_UL")) |> 
-  mutate(OA = if_else(age_LL >= 60, T, F)) |> 
-  filter(OA == T) |> 
-  group_by(iso3c) |> 
+pop |>
+  separate(age, into = c("age_LL", "age_UL")) |>
+  mutate(OA = if_else(age_LL >= 60, T, F)) |>
+  filter(OA == T) |>
+  group_by(iso3c) |>
   summarise(pop_OA = sum(m+f)) -> pop_OA
 
-non_S_combined |> 
-  left_join(pop_bycountry, by = "iso3c") |> rename(pop = tot) |> 
-  left_join(pop_OA, by = "iso3c") |> 
-  left_join(ms_cov_all[,c("date_start","scenario","iso3c","vac_unit")] |> 
+non_S_combined |>
+  left_join(pop_bycountry, by = "iso3c") |> rename(pop = tot) |>
+  left_join(pop_OA, by = "iso3c") |>
+  left_join(ms_cov_all[,c("date_start","scenario","iso3c","vac_unit")] |>
               mutate(date_start = as.character(date_start)),
-            by = c("date_start","scenario","iso3c")) |> 
-  left_join(GDPPC |> 
-              rename(iso3c = country), 
-            by = "iso3c") |> 
-  mutate(p_OA = pop_OA*1000/pop) |> 
-  left_join(cost_hc_expenditure_GHED[,c(1,5)], by = "iso3c") |> 
+            by = c("date_start","scenario","iso3c")) |>
+  left_join(GDPPC |>
+              rename(iso3c = country),
+            by = "iso3c") |>
+  mutate(p_OA = pop_OA*1000/pop) |>
+  left_join(cost_hc_expenditure_GHED[,c(1,5)], by = "iso3c") |>
   left_join(group_income, by = "iso3c") -> regtab
 
-non_S_combined |> 
-  mutate(ICER_cat = factor(ICER_cat),
-         Type = factor(Type,
-                       levels = c("az","pf"),
-                       labels = c("Viral vector vaccine",
-                                  "mRNA vaccine"))) |> 
-  ggplot(aes(x = ICER_cat, y = sero)) +
-  geom_boxplot() +
-  theme_bw() +
-  custom_theme +
-  labs(x = "ICER as a proportion of GDP per capita",
-       y = "Pop level seroprevalence at the beginning of vaccine roll-out") +
-  facet_wrap(~Type, ncol = 1) 
+# non_S_combined |>
+#   mutate(ICER_cat = factor(ICER_cat),
+#          Type = factor(Type,
+#                        levels = c("az","pf"),
+#                        labels = c("Viral vector vaccine",
+#                                   "mRNA vaccine"))) |>
+#   ggplot(aes(x = ICER_cat, y = sero)) +
+#   geom_boxplot() +
+#   theme_bw() +
+#   custom_theme +
+#   labs(x = "ICER as a proportion of GDP per capita",
+#        y = "Pop level seroprevalence at the beginning of vaccine roll-out") +
+#   facet_wrap(~Type, ncol = 1)
 
-ggsave("figs/R2R_R1/CE_by_sero.png",
-       width = 10, height = 18)
+# ggsave("figs/R2R_R1/CE_by_sero.png",
+#        width = 10, height = 18)
 
-aov(sero ~ ICER_cat, data = non_S_combined |> 
-      filter(Type == "az")) -> m1
-summary(m1)
-
-aov(sero ~ ICER_cat, data = non_S_combined |> 
-      filter(Type == "pf")) -> m2
-summary(m2)
+# aov(sero ~ ICER_cat, data = non_S_combined |> 
+#       filter(Type == "az")) -> m1
+# summary(m1)
+# 
+# aov(sero ~ ICER_cat, data = non_S_combined |> 
+#       filter(Type == "pf")) -> m2
+# summary(m2)
 
 require(MASS)
 require(DescTools)
-polr(ICER_cat ~ sero, data = non_S_combined |> filter(Type == "az")) -> m3
-PseudoR2(m3)
-
-polr(ICER_cat ~ sero, data = non_S_combined |> filter(Type == "pf")) -> m4
-PseudoR2(m4)*100
-
-lm(ICER_scaled ~ sero, data = non_S_combined |> filter(Type == "az")) -> m5
-lm(ICER_scaled ~ sero, data = non_S_combined |> filter(Type == "pf")) -> m6
-summary(m5)
-summary(m6)
+# polr(ICER_cat ~ sero, data = non_S_combined |> filter(Type == "az")) -> m3
+# PseudoR2(m3)
+# 
+# polr(ICER_cat ~ sero, data = non_S_combined |> filter(Type == "pf")) -> m4
+# PseudoR2(m4)*100
+# 
+# lm(ICER_scaled ~ sero, data = non_S_combined |> filter(Type == "az")) -> m5
+# lm(ICER_scaled ~ sero, data = non_S_combined |> filter(Type == "pf")) -> m6
+# summary(m5)
+# summary(m6)
 
 # test all covariates
 cov_list
@@ -177,17 +177,59 @@ m_cat_az |> map(PseudoR2) |> unlist() -> RS_cat_az
 m_cat_pf |> map(PseudoR2) |> unlist() -> RS_cat_pf
 
 # 
+
+f_con <- paste("ICER_scaled ~ ", cov_list) |> map(formula)
+
+# m_con <- map(f_con, lm, data = regtab) 
+
 m_con_az <- map(f_con, lm, data = regtab |> filter(Type == "az"))
 m_con_pf <- map(f_con, lm, data = regtab |> filter(Type == "pf"))
+# 
+# m_con_az |> map(summary) |> lapply("[[", "r.squared") |> unlist() -> RS_con_az
+# m_con_pf |> map(summary) |> lapply("[[", "r.squared") |> unlist() -> RS_con_pf
 
-m_con_az |> map(summary) |> lapply("[[", "r.squared") |> unlist() -> RS_con_az
-m_con_pf |> map(summary) |> lapply("[[", "r.squared") |> unlist() -> RS_con_pf
+# data.frame(RS_con_az = RS_con_az,
+#            RS_con_pf = RS_con_pf,
+#            RS_cat_az = RS_cat_az,
+#            RS_cat_pf = RS_cat_pf) |> 
+#   rowMeans()
 
-data.frame(RS_con_az = RS_con_az,
-           RS_con_pf = RS_con_pf,
-           RS_cat_az = RS_cat_az,
-           RS_cat_pf = RS_cat_pf) |> 
-  rowMeans()
+coef_tab <- list()
 
-m_con_az |> map(summary) |> lapply("[[", "coefficients") 
+m_con_az |> 
+# m_con |> 
+  map(summary) |> 
+  lapply("[[", "coefficients") |> 
+  setNames(cov_list) |> 
+  map(data.frame) |> 
+  map(rownames_to_column, var = "variable") |> 
+  bind_rows(.id = "model") |> 
+  filter(variable != "(Intercept)")  -> coef_tab[["az"]]
 
+m_con_pf |> 
+  # m_con |> 
+  map(summary) |> 
+  lapply("[[", "coefficients") |> 
+  setNames(cov_list) |> 
+  map(data.frame) |> 
+  map(rownames_to_column, var = "variable") |> 
+  bind_rows(.id = "model") |> 
+  filter(variable != "(Intercept)")  -> coef_tab[["pf"]]
+
+(m_con_az |> 
+    map(summary) |> 
+    lapply("[[", "adj.r.squared")) |> 
+  unlist() |> 
+  enframe(name = "model",
+          value = "adj.r.squared") |> 
+  mutate(model = cov_list) |> 
+  right_join(coef_tab$az, by = "model")  -> coef_tab[["az"]]
+
+(m_con_pf |> 
+    map(summary) |> 
+    lapply("[[", "adj.r.squared")) |> 
+  unlist() |> 
+  enframe(name = "model",
+          value = "adj.r.squared") |> 
+  mutate(model = cov_list) |> 
+  right_join(coef_tab$pf, by = "model")  -> coef_tab[["pf"]]
