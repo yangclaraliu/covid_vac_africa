@@ -23,10 +23,10 @@ res$az %>%
 
 impact$az |> 
   filter(econ_id == 1) |> 
-  select(epi_id, country, dalys) |> 
+  dplyr::select(epi_id, country, dalys) |> 
   left_join(impact$novac |> 
               filter(econ_id == 1) |> 
-              select(epi_id, country, dalys) |> 
+              dplyr::select(epi_id, country, dalys) |> 
               rename(dalys_novac = dalys),
             by = c("epi_id", "country")
   ) |> 
@@ -35,13 +35,13 @@ impact$az |>
 tmp1 |> 
   filter(name == "Deaths") |> 
   mutate(name = "DALYs") |> 
-  select(-rr, -value, -novac) |> 
+  dplyr::select(-rr, -value, -novac) |> 
   left_join(tmp2 |> 
               rename(scenario_id = epi_id),
             by = c("scenario_id","country")) |> 
   rename(value = dalys,
          novac = dalys_novac) |> 
-  select(colnames(tmp1)) -> tmp3
+  dplyr::select(colnames(tmp1)) -> tmp3
 
 tmp <- bind_rows(tmp1, tmp3) |> 
   mutate(name = factor(name,
@@ -72,4 +72,4 @@ ggplot(tmp, aes(group = interaction(date_start, scenario),
                                 ymd("2021-12-15"))) +
   custom_theme
 
-ggsave("figs/R2R_R1/fig2_az_v2.png", width = 15, height = 15)
+ggsave("figs/R2R_R1/fig2_az_v2.png", width = 10, height = 10)

@@ -1,54 +1,30 @@
-merge_novac_grouped <- function(tmp, ext = F){
+merge_novac_grouped <- function(tmp){
   require(magrittr)
-  if(ext == F){
     tmp$pfizer$non_fatal %<>%
-      left_join(res_novac$pfizer[[1]] %>%
+      left_join(res_novac_grouped$pfizer[[1]] %>%
                   rename(novac = value),
                 by = c("name", "population", "group","year"))
     
     tmp$pfizer$fatal %<>%
-      left_join(res_novac$pfizer[[2]],
+      left_join(res_novac_grouped$pfizer[[2]],
                 by = c("name", "population", "group", "year"))
     
     
     tmp$az$non_fatal %<>%
-      left_join(res_novac$az[[1]] %>%
+      left_join(res_novac_grouped$az[[1]] %>%
                   rename(novac = value),
                 by = c("name", "population", "group","year"))
     
     tmp$az$fatal %<>%
-      left_join(res_novac$az[[2]],
+      left_join(res_novac_grouped$az[[2]],
                 by = c("name", "population", "group", "year"))
-  }
-  
-  if(ext == T){
-    tmp$pfizer$non_fatal %<>%
-      left_join(res_novac$pfizer_ext[[1]] %>%
-                  rename(novac = value),
-                by = c("name", "population", "year"))
-    
-    tmp$pfizer$fatal %<>%
-      left_join(res_novac$pfizer_ext[[2]],
-                by = c("name", "population", "group", "year"))
-    
-    
-    tmp$az$non_fatal %<>%
-      left_join(res_novac$az_ext[[1]] %>%
-                  rename(novac = value),
-                by = c("name", "population", "year"))
-    
-    tmp$az$fatal %<>%
-      left_join(res_novac$az_ext[[2]],
-                by = c("name", "population", "group", "year"))
-  }
-  
-  
   return(tmp)
 }
 
 # load data
 params_grid_az_70_grouped <- readRDS("~/GitHub/covid_vac_africa/data/intermediate/params_grid_az_70_grouped.rds")
 params_grid_pfizer_70_grouped <- readRDS("~/GitHub/covid_vac_africa/data/intermediate/params_grid_pfizer_70_grouped.rds")
+res_novac_grouped <- readRDS("~/GitHub/covid_vac_africa/data/intermediate/res_novac_grouped.rds")
 
 # organise results
 res_grouped <- organise_outcomes(tmp_pfizer = params_grid_pfizer_70_grouped,
@@ -81,7 +57,7 @@ c(input_fatal_grouped,
     dplyr::select(epi_id, country, year, age, deaths, Type) %>% 
     group_by(Type) %>% group_split() %>% 
     setNames(c("az","pfizer")) %>% 
-    map(select, -Type) %>% 
+    map(dplyr::select, -Type) %>% 
     map(data.table)) -> input_fatal_grouped
 
 input_fatal_grouped$all %>% 
@@ -110,7 +86,7 @@ c(input_non_fatal_grouped,
     dplyr::select(epi_id, country, group, year, cases, non_icu, icu, Type) %>% 
     group_by(Type) %>% group_split() %>% 
     setNames(c("az","pfizer")) %>% 
-    map(select, -Type)%>% 
+    map(dplyr::select, -Type)%>% 
     map(data.table)) -> input_non_fatal_grouped
 
 res_grouped_merged$pfizer$non_fatal %>% 
@@ -129,7 +105,7 @@ res_grouped_merged$pfizer$non_fatal %>%
   data.table() -> input_non_fatal_grouped[["novac"]]
 
 input_non_fatal_grouped$novac |> 
-  select(colnames(input_non_fatal_grouped$az)) -> input_non_fatal_grouped$novac
+  dplyr::select(colnames(input_non_fatal_grouped$az)) -> input_non_fatal_grouped$novac
 
 # 
 #testing 
@@ -150,8 +126,8 @@ for (s in 1:nrow(econ_scens)){
     r   = econ_scens[[s,"discount_rate"]],
     smr = econ_scens[[s,"smr"]],
     selectCountries = unique(epi_deaths[,country]),
-    LT = LT,
-    POP = POP
+    LT = UNLT,
+    POP = UNPOP
   )
   dLE[[s]][, econ_id := s]
 }
@@ -227,7 +203,7 @@ cov_econ_outcomes_grouped <- function(
     mutate(group = factor(AgeBand,
                           levels = 1:16,
                           labels = unique(ylds$group))) |> 
-    select(-AgeBand) -> ylls
+    dplyr::select(-AgeBand) -> ylls
     
   
   # merge ylls with ylds and calculate dalys
@@ -240,7 +216,7 @@ cov_econ_outcomes_grouped <- function(
 }
 
 cov_econ_outcomes_grouped(
-  epi_deaths = input_fatal_grouped$az
+  epi_deaths = input_fatal_grouped$az,
   epi_cases = input_non_fatal_grouped$az,
   econ_scens = econ_scens[1,],
   LT = UNLT,
@@ -274,7 +250,11 @@ pop_bycountry <- pop |>
 
 ICER$az_03 |> 
   filter(econ_id == 1) |> 
-  select(date_start, ICER_scaled, iso3c, scenario) |> 
+  mutate(Type = "az") |> 
+  bind_rows(ICER$pf_03 |> 
+              filter(econ_id == 1) |> 
+              mutate(Type = "pf")) |> 
+  dplyr::select(date_start, ICER_scaled, iso3c, scenario, Type) |> 
   left_join(pop_bycountry, by = "iso3c") |> 
   mutate(ICER_cat = case_when(ICER_scaled < 0.1 ~ 1,
                               ICER_scaled >= 0.1 & ICER_scaled < 0.3 ~ 2,
@@ -282,62 +262,83 @@ ICER$az_03 |>
                               ICER_scaled >= 0.5 & ICER_scaled < 1 ~ 4,
                               ICER_scaled >= 1 ~ 5)) |> 
   # select(-ICER_scaled) |> 
-  select(-ICER_cat) |> 
+  dplyr::select(-ICER_cat) |> 
   pivot_wider(names_from = scenario, values_from = ICER_scaled) |> 
   mutate(check = case_when(medium < fast ~ "1",
                            medium == fast ~ "2",
                            medium > fast ~ "3")) -> bar_met
-  
-  
 # plot results
 out_az_grouped |> 
   left_join(ms_scenarios |> 
               rownames_to_column(var = "epi_id"), 
             by = "epi_id") |> 
+  mutate(Type = "az") |> 
+  bind_rows(out_pfizer_grouped |> 
+              left_join(ms_scenarios |> 
+                          rownames_to_column(var = "epi_id"), 
+                        by = "epi_id") |> 
+              mutate(Type = "pf")) |> 
   mutate(date_start = ymd(date_start),
          older = if_else(group %in% c("60-64",
                                       "65-69",
                                       "70-74",
                                       "75+"),
                          T, F)) |> 
-  group_by(epi_id, country, scenario, date_start, older) |> 
+  group_by(epi_id, country, scenario, date_start, older, Type) |> 
   summarise(dalys = sum(dalys)) |> 
-  group_by(epi_id, country, scenario, date_start) |> 
+  group_by(epi_id, country, scenario, date_start, Type) |> 
   mutate(dalys_tot = sum(dalys),
          dalys_prop = dalys/dalys_tot,
          scenario = factor(scenario,
                            levels = c("slow", "medium", "fast"))) |> 
   rename(iso3c = country) |> 
-  right_join(bar_met[,c("date_start", "iso3c", "check")], by = c("date_start", "iso3c")) |> 
+  right_join(bar_met[,c("date_start", "iso3c", "check", "Type")], 
+             by = c("date_start", "iso3c", "Type")) |> 
   filter(older == T, scenario != "slow") |> 
   ungroup() |> 
-  select(-dalys, -dalys_tot, -epi_id) |> 
-  pivot_wider(names_from = scenario, values_from = dalys_prop) -> data_test
+  dplyr::select(-dalys, -dalys_tot, -epi_id) |> 
+  pivot_wider(names_from = scenario, values_from = dalys_prop) |> 
+  data.table() -> data_test
 
-t1 <- t.test(data_test[data_test$check == "1", ]$fast, 
-             data_test[data_test$check == "1", ]$medium, 
+t1 <- t.test(data_test[check == "1" & Type == "az", ]$fast, 
+             data_test[check == "1" & Type == "az", ]$medium, 
              paired = T, 
              alternative = "two.sided")
-# t2 <- t.test(data_test[data_test$check == "2", ]$fast, 
-#              data_test[data_test$check == "2", ]$medium, 
-#              paired = T, 
-#              alternative = "two.sided")
-t3 <- t.test(data_test[data_test$check == "3", ]$fast, 
-             data_test[data_test$check == "3", ]$medium, 
+
+t2 <- t.test(data_test[check == "3" & Type == "az", ]$fast, 
+             data_test[check == "3" & Type == "az", ]$medium, 
              paired = T, 
              alternative = "two.sided")
+
+t3 <- t.test(data_test[check == "1" & Type == "pf", ]$fast, 
+             data_test[check == "1" & Type == "pf", ]$medium, 
+             paired = T, 
+             alternative = "two.sided")
+
+t4 <- t.test(data_test[check == "3" & Type == "pf", ]$fast, 
+             data_test[check == "3" & Type == "pf", ]$medium, 
+             paired = T, 
+             alternative = "two.sided")
+
 
 data.frame(mean = c(t1$estimate,
-                    #t2$estimate,
-                    t3$estimate), 
+                    t2$estimate,
+                    t3$estimate,
+                    t4$estimate), 
            LL = c(t1$conf.int[1],
-                  #t2$conf.int[1],
-                  t3$conf.int[1]),
+                  t2$conf.int[1],
+                  t3$conf.int[1],
+                  t4$conf.int[1]),
            UL = c(t1$conf.int[2],
-                  #t2$conf.int[2],
-                  t3$conf.int[2]),
+                  t2$conf.int[2],
+                  t3$conf.int[2],
+                  t4$conf.int[2]),
            lab = c("ICER_medium < ICER_fast", 
-                   "ICER_medium > ICER_fast")) |> 
+                   "ICER_medium > ICER_fast"),
+           Type = c("Viral vector vaccine",
+                    "Viral vector vaccine",
+                    "mRNA vaccine",
+                    "mRNA vaccine")) |> 
   ggplot() +
   geom_point(aes(x = lab, y = mean), size = 3) +
   geom_segment(aes(x = lab, xend = lab,
@@ -345,8 +346,9 @@ data.frame(mean = c(t1$estimate,
   theme_bw() +
   custom_theme +
   labs(x = "",
-       y = "Differences in proportions DALY loss saved") +
+       y = expression("paDALY"["fast, 60+"] - "paDALY"["medium, 60+"])) +
   scale_x_discrete(labels = parse(text = c("ICER[medium] < ICER[fast]",
-                                           "ICER[medium] > ICER[fast]")))
+                                           "ICER[medium] > ICER[fast]")))+
+  facet_wrap(~Type, ncol = 1, scales = "free")
 
-ggsave("figs/R2R_R1/ICER_grouped.png", width = 9, height = 6)  
+ggsave("figs/R2R_R1/ICER_grouped.png", width = 8, height = 12)  
