@@ -77,34 +77,34 @@ ICER[["pf_10"]] <- compile_ICER_by_threshold(GDP_p = 1, vac_type = "pfizer")
 #   facet_wrap(~GDP_label, scales = "free") +
 #   geom_abline(aes(intercept = 0, slope = GDPPC_2020_USD*0.5))
 
-ICER$az_05 %>% 
-  mutate(Type = "Viral Vector Vaccine") %>% 
-  bind_rows(ICER$pf_05 %>% 
-              mutate(Type = "mRNA Vaccine")) %>% 
-  group_by(date_start, econ_id, Type, iso3c) %>% 
-  mutate(ICER_rank = rank(desc(ICER)) %>% factor(., levels = 1:3),
-         iso3c = factor(iso3c),
-         scenario = factor(scenario,
-                           levels = c("slow", "medium", "fast"),
-                           labels = c("Slow", "Medium", "Fast"))) %>% 
-  group_by(date_start, scenario, econ_id, Type, ICER_rank, ICER_scaled_bin ) %>% tally %>% 
-  # filter(Type == "Pfizer") %>% 
-  filter(econ_id == 1) %>% 
-  # filter(ICER_scaled_bin == T) %>% 
-  ggplot(., aes(x = date_start, y = n, color = ICER_rank, fill = ICER_rank)) +
-  geom_bar(stat = "identity", position = "stack", width=32) +
-  scale_fill_rickandmorty() +
-  scale_color_rickandmorty() +
-  facet_grid(Type~scenario) +
-  theme_bw() +
-  custom_theme +
-  theme(legend.position = "top") +
-  labs(y = "Counts",
-       color = "ICER Ranking",
-       fill = "ICER Ranking",
-       x = "Availability of Supply measured by\nVaccine Roll-out Start Date")
-
-ggsave("figs/ICER_ranking_full_v3.png", height = 10, width = 20)
+# ICER$az_05 %>% 
+#   mutate(Type = "Viral Vector Vaccine") %>% 
+#   bind_rows(ICER$pf_05 %>% 
+#               mutate(Type = "mRNA Vaccine")) %>% 
+#   group_by(date_start, econ_id, Type, iso3c) %>% 
+#   mutate(ICER_rank = rank(desc(ICER)) %>% factor(., levels = 1:3),
+#          iso3c = factor(iso3c),
+#          scenario = factor(scenario,
+#                            levels = c("slow", "medium", "fast"),
+#                            labels = c("Slow", "Medium", "Fast"))) %>% 
+#   group_by(date_start, scenario, econ_id, Type, ICER_rank, ICER_scaled_bin ) %>% tally %>% 
+#   # filter(Type == "Pfizer") %>% 
+#   filter(econ_id == 1) %>% 
+#   # filter(ICER_scaled_bin == T) %>% 
+#   ggplot(., aes(x = date_start, y = n, color = ICER_rank, fill = ICER_rank)) +
+#   geom_bar(stat = "identity", position = "stack", width=32) +
+#   scale_fill_rickandmorty() +
+#   scale_color_rickandmorty() +
+#   facet_grid(Type~scenario) +
+#   theme_bw() +
+#   custom_theme +
+#   theme(legend.position = "top") +
+#   labs(y = "Counts",
+#        color = "ICER Ranking",
+#        fill = "ICER Ranking",
+#        x = "Availability of Supply measured by\nVaccine Roll-out Start Date")
+# 
+# ggsave("figs/ICER_ranking_full_v3.png", height = 10, width = 20)
 
 #### ICER RAW #### 
 p_list <- list()
@@ -208,7 +208,7 @@ ICER$az_05 %>%
          date_start = factor(date_start)) %>% 
   filter(!is.na(affordability)) %>% 
   mutate(date_start = factor(date_start)) %>% 
-  filter(affordability > 1 & ICER_scaled < 0.5)
+  # filter(affordability > 1 & ICER_scaled < 0.5)
   # mutate(date_start = ymd(date_start)) %>% 
   # filter(date_start == "2021-02-01", !is.na(affordability)) %>% 
   # ggplot(., aes(x = affordability, y = scenario,  

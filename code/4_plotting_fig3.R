@@ -11,7 +11,7 @@ ICER_all$az_05_ext %>% mutate(version = "ext", Type = "az") %>%
   filter(econ_id == 1) %>% 
   mutate(m = month(date_start)) |>
   select(iso3c, Type, m, scenario, ICER_scaled, version, econ_id) |> 
-  mutate(ICER_scaled = cut(ICER_scaled,
+  mutate(ICER_cat= cut(ICER_scaled,
                         breaks = c(-Inf, 0.1, 0.3, 0.5, 1, Inf),
                         labels = c("<0.1", 
                                    "0.1-0.3",
@@ -38,15 +38,18 @@ ICER_all$az_05_ext %>% mutate(version = "ext", Type = "az") %>%
                            levels = c("slow", "medium", "fast"),
                            labels = c("Slow",
                                       "Medium",
-                                      "Fast"))) %>% 
-  filter(Type == "Viral vector vaccines") |> 
-  group_by(m, bc, ext) |> tally() |> 
-  ggplot(aes(x = bc, y = ext, fill = n)) +
-  geom_tile() +
-  facet_wrap(~m)
-
-
-  # ggplot(., aes(x = bc,
+                                      "Fast"))) #%>% 
+  # filter(Type == "Viral vector vaccines") |> 
+  # group_by(m, bc, ext, Type, scenario) |> tally() |> 
+  # ggplot(aes(x = bc, y = ext, fill = n)) +
+  # geom_tile(color = "black") +
+  # ggsci::scale_fill_material("deep-purple") + 
+  # facet_wrap(~Type)+
+  # theme_bw() +
+  # custom_theme +
+  # theme()
+  
+# ggplot(., aes(x = bc,
   #               y = ext,
   #               fill = m)) +
   # geom_point(aes(pch = Type),
@@ -380,13 +383,14 @@ plot_ICER_grid <- function(version = "bc",
       scale_x_continuous(breaks = ymd("2021-06-01")) +
       theme_bw() +
       custom_theme +
+      # coord_fixed(ratio = 1) +
       theme(axis.text.y = element_blank(),
             axis.title.y = element_blank(),
             panel.grid = element_blank(),
             legend.position = "top",
             legend.key.size = unit(1, "cm")) +
       labs(x = "Availability of Supply measured by\nVaccine Roll-out Start Date",
-           fill = expression(frac(ICER, "GDP per capita"))) -> p_list[[i]]
+           fill = "ICER as a proportion\nof GDP per capita") -> p_list[[i]]
   }
 
   p1 <- plot_grid(plot_grid(NA,
@@ -400,11 +404,14 @@ plot_ICER_grid <- function(version = "bc",
 
   plot_grid(plotlist = list(p1,
                             plot_grid(get_legend(p_list$LIC + 
-                                                   guides(fill=guide_legend(nrow=5,byrow=TRUE))), NA,
+                                                   guides(fill=guide_legend(nrow=5,
+                                                                            byrow=TRUE))),
+                                      NA,
                                       p_list$UMIC + 
                                         theme(legend.position = "none") + 
                                         labs(title = "C. Upper Middle Income"),
-                                      rel_heights = c(1, 3,3), ncol = 1)),
+                                      rel_heights = c(6,1,5), ncol = 1)
+                            ),
             ncol = 2,
             rel_widths = c(2,1)) -> p_all
 
@@ -413,7 +420,7 @@ plot_ICER_grid <- function(version = "bc",
 
 p_ICER <- list()
 p_ICER[["base_case"]] <- plot_ICER_grid()
-ggsave(filename = "figs/R2R_R1/fig3_v2.png",
+ggsave(filename = "figs/R2R_R1/fig3_v2_fixed.png",
        plot = p_ICER[["base_case"]],
        width = 18, height = 10)
 # p_ICER[["base_case_ext"]] <- plot_ICER_grid(version = "ext")
