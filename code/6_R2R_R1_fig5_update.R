@@ -57,6 +57,12 @@ ICER$az_05 %>%
                                  "Negative"))) -> tmp_tab
   
 
+tmp_tab |> 
+  group_by(Type, pat) |> 
+  summarise(tot = sum(n)) |> 
+  group_by(Type) |> 
+  mutate(all_comb = sum(tot)) |> mutate(p = tot/all_comb) |> View()
+
 tmp_tab  |> 
   ggplot(aes(x = ICER_cat, y = affordability_cat)) +
   geom_tile_pattern(aes(pattern = pat), 

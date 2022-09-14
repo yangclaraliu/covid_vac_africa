@@ -138,7 +138,8 @@ tmp |>
   dplyr::select(starts_with("price_reduction") & ends_with("_vac"), Type, scenario, date_start) |> 
   pivot_longer(cols = starts_with("price")) |> 
   mutate(name = parse_number(name)/10,
-         name = factor(name, levels = seq(0.1,0.5,0.1)),
+         name = factor(name, levels = seq(0.1,0.5,0.1),
+                       labels = paste0(seq(0.1,0.5,0.1),"xGDPpc")),
          value = if_else(value > 0, 0, value),
          Type = factor(Type, levels = c("az","pf"),
                        labels = c("Viral vector vaccines",
@@ -147,10 +148,9 @@ tmp |>
   mutate(value_md = median(value),
          value_mu = mean(value)) |> 
   ungroup() |> 
-  dplyr::select(Type, name, date_start, scenario, value_md, value_mu) |>
-  distinct() |>
-  group_by(Type) |> group_split() |> map(pull, value_mu) |> map(range)
-  
+  # dplyr::select(Type, name, date_start, scenario, value_md, value_mu) |>
+  # distinct() |>
+  # group_by(Type) |> group_split() |> map(pull, value_mu) |> map(range)
   ggplot() +
   geom_density(aes(x = value, group = name, color = name)) +
   geom_vline(aes(xintercept = value_mu,
@@ -166,7 +166,7 @@ tmp |>
        title = "Start date = pooled, Roll-out rate = pooled"
        ) +
   theme(legend.position = "top") +
-  scale_color_lancet()
+  scale_color_lancet()+guides(fill=guide_legend(nrow=2,byrow=TRUE))
 
 ggsave("figs/R2R_R1/target_price_reduction_all.png",
-       width = 10, height = 10)
+       width = 14, height = 10)

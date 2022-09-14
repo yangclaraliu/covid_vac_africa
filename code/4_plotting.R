@@ -191,7 +191,7 @@ fitted_table |>
   geom_density() +
   theme_cowplot() +
   custom_theme +
-  labs(x = "[4] Variants of Concern Transition Time",
+  labs(x = "[4] Variants of Concern Transition Time\n2021",
        y = "Probability Density") -> p_4
 
 plot_grid(p_1, p_2, p_3, p_4, ncol = 2)

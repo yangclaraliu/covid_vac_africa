@@ -39,6 +39,18 @@ readxl::read_excel(paste0(path_dropbox,
          icu =  as.numeric(icu)*(108.596 / 107.303),
          deaths = as.numeric(deaths)*(108.596 / 107.303))-> cost_care
 
+# cost_care |> 
+#   group_by(cn) |> 
+#   pull(deaths) |> unique()
+#   melt() |> 
+#   group_by(variable) |> 
+#   filter(value > 250)
+#   summarise(LL = min(value),
+#             FQ = quantile(value, 0.25),
+#             md = median(value),
+#             TQ = quantile(value, 0.75),
+#             UL = max(value))
+
 cost_care[cost_care$cn == "Egypt, Arab Rep.","cn"] <- "Egypt"
 cost_care[cost_care$cn == "Congo, Dem. Rep.","cn"] <- "Dem. Republic of the Congo"
 
