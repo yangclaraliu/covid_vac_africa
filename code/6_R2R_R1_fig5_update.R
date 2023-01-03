@@ -49,12 +49,12 @@ ICER$az_05 %>%
                          ICER_cat %in% c("(0.5,1]",
                                          "(1, Inf]") |
                            affordability_cat %in% c("(0.5,1]",
-                                                    "(1, Inf]") ~ "Negative",
-                         TRUE ~ "Positive"),
+                                                    "(1, Inf]") ~ "Undesirable",
+                         TRUE ~ "Desirable"),
          pat = factor(pat,
-                      levels = c("Positive",
+                      levels = c("Desirable",
                                  "Mixed",
-                                 "Negative"))) -> tmp_tab
+                                 "Undesirable"))) -> tmp_tab
   
 
 tmp_tab |> 
@@ -130,7 +130,7 @@ tmp_tab  |>
   theme(legend.position = "none") +
   labs(color = "",
        fill = "",
-       y = "Affordability\nIncremental Costs/General Healthcare Expenditure",
+       y = "Relative Affordability\nIncremental Costs/General Healthcare Expenditure",
        x = "ICER in relation to GDP per capita by country"
        # y = "Frequency"
   ) +
@@ -142,8 +142,14 @@ tmp_tab  |>
 
 plot_grid(legend1, legend2, p+ coord_fixed(ratio = 1), ncol = 1,
           rel_heights = c(1,1,15)) -> p_save
-ggsave("figs/R2R_R1/fig5_updated.png",
+
+ggsave("figs/R2R_R2/fig5_updated.png",
        width = 8, height = 16)
+
+tmp_tab |> 
+  group_by(Type) |> 
+  summarise(n = sum(n))
+
 
 # regression model
 ICER$az_05 %>% 

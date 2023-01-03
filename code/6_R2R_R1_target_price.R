@@ -139,7 +139,7 @@ tmp |>
   pivot_longer(cols = starts_with("price")) |> 
   mutate(name = parse_number(name)/10,
          name = factor(name, levels = seq(0.1,0.5,0.1),
-                       labels = paste0(seq(0.1,0.5,0.1),"xGDPpc")),
+                       labels = paste0(seq(0.1,0.5,0.1),"")),
          value = if_else(value > 0, 0, value),
          Type = factor(Type, levels = c("az","pf"),
                        labels = c("Viral vector vaccines",
@@ -152,8 +152,8 @@ tmp |>
   # distinct() |>
   # group_by(Type) |> group_split() |> map(pull, value_mu) |> map(range)
   ggplot() +
-  geom_density(aes(x = value, group = name, color = name)) +
-  geom_vline(aes(xintercept = value_mu,
+  geom_density(aes(x = value*100, group = name, color = name)) +
+  geom_vline(aes(xintercept = value_mu*100,
                  color = name),
              linetype = 2,
              size = 2) +
@@ -161,8 +161,8 @@ tmp |>
   theme_cowplot() +
   custom_theme +
   labs(y = "Density",
-       x = "% reduction in vaccine unit costs required",
-       color = "Mean % reduction in vaccine unit costs required\ntargeting different willingness-to-pay thresholds",
+       x = "% change in vaccine unit costs required",
+       color = "Mean % change in vaccine unit costs required\ntargeting different willingness-to-pay thresholds\n(unit = xGDP per capita)",
        title = "Start date = pooled, Roll-out rate = pooled"
        ) +
   theme(legend.position = "top") +
@@ -170,3 +170,24 @@ tmp |>
 
 ggsave("figs/R2R_R1/target_price_reduction_all.png",
        width = 14, height = 10)
+
+tmp |> 
+  bind_rows(.id = "Type") |> 
+  # filter(date_start == "2021-08-01") |> 
+  filter(econ_id == 1) |> 
+  dplyr::select(starts_with("price_reduction") & ends_with("_vac"), Type, scenario, date_start) |> 
+  pivot_longer(cols = starts_with("price")) |> 
+  mutate(name = parse_number(name)/10,
+         name = factor(name, levels = seq(0.1,0.5,0.1),
+                       labels = paste0(seq(0.1,0.5,0.1),"xGDPpc")),
+         value = if_else(value > 0, 0, value),
+         Type = factor(Type, levels = c("az","pf"),
+                       labels = c("Viral vector vaccines",
+                                  "mRNA vaccines"))) |>
+  # filter(date_start == "2021-08-01") |> 
+  group_by(Type, name) |> 
+  mutate(value_md = median(value),
+         value_mu = mean(value)) |> 
+  ungroup() |> 
+  select(Type, name, value_mu) |> 
+  distinct() 

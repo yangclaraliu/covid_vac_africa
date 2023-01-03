@@ -263,6 +263,7 @@ ICER$az_03 |>
                               ICER_scaled >= 1 ~ 5)) |> 
   # select(-ICER_scaled) |> 
   dplyr::select(-ICER_cat) |> 
+  mutate(ICER_scaled = round(ICER_scaled, 2)) |> 
   pivot_wider(names_from = scenario, values_from = ICER_scaled) |> 
   mutate(check = case_when(medium < fast ~ "1",
                            medium == fast ~ "2",
@@ -352,3 +353,69 @@ data.frame(mean = c(t1$estimate,
   facet_wrap(~Type, ncol = 1, scales = "free")
 
 ggsave("figs/R2R_R1/ICER_grouped.png", width = 8, height = 12)  
+
+out_az_grouped |> 
+  left_join(ms_scenarios |> 
+              rownames_to_column(var = "epi_id"), 
+            by = "epi_id") |> 
+  mutate(Type = "az") |> 
+  bind_rows(out_pfizer_grouped |> 
+              left_join(ms_scenarios |> 
+                          rownames_to_column(var = "epi_id"), 
+                        by = "epi_id") |> 
+              mutate(Type = "pf")) |> 
+  mutate(date_start = ymd(date_start),
+         older = if_else(group %in% c("60-64",
+                                      "65-69",
+                                      "70-74",
+                                      "75+"),
+                         T, F)) |> 
+  group_by(epi_id, country, scenario, date_start, older, Type) |> 
+  summarise(dalys = sum(dalys)) |> 
+  group_by(epi_id, country, scenario, date_start, Type) |> 
+  mutate(dalys_tot = sum(dalys),
+         dalys_prop = dalys/dalys_tot,
+         scenario = factor(scenario,
+                           levels = c("slow", "medium", "fast"))) |> 
+  rename(iso3c = country) |> 
+  ungroup() |> 
+  filter(older == T) |> 
+  dplyr::select(Type, iso3c, scenario, dalys_prop, date_start) |> 
+  pivot_wider(names_from = scenario,
+              values_from = dalys_prop) |> 
+  mutate(fast = round(fast, 2),
+         medium = round(medium, 2),
+         diff_paDALYs = case_when(fast > medium ~ "paDALYs: fast > medium",
+                                  fast < medium ~ "paDALYs: fast < medium",
+                                  fast == medium ~ "paDALYs: fast == medium")) |> 
+  right_join(bar_met[,c("date_start", "iso3c", "check", "Type")], 
+             by = c("date_start", "iso3c", "Type")) |> 
+  rename(diff_ICERs = check) |> 
+  mutate(diff_ICERs = case_when(diff_ICERs == 1 ~ "ICER: fast > medium",
+                               diff_ICERs == 2 ~ "ICER: fast == medium",
+                               diff_ICERs == 3 ~ "ICER: fast < medium")) |> 
+  group_by(diff_paDALYs, diff_ICERs, Type) |> 
+  tally() -> byTable
+
+byTable |> 
+  filter(Type == "pf") |> 
+  filter(diff_ICERs != "ICER: fast == medium",
+         diff_paDALYs != "paDALYs: fast == medium") |>
+  pivot_wider(names_from = diff_ICERs,
+              values_from = n) %>%
+  # replace(is.na(.), 0) |> 
+  ungroup() %>%
+  as.data.frame() %>% 
+  set_rownames(.[,1]) |> 
+  dplyr::select(3:4) |> as.matrix() |> oddsratio()
+
+byTable |> 
+  filter(Type == "az") |> 
+  filter(diff_ICERs != "ICER: fast == medium",
+         diff_paDALYs != "paDALYs: fast == medium") |> 
+  pivot_wider(names_from = diff_ICERs,
+              values_from = n) |>
+  ungroup() %>%
+  as.data.frame() %>% 
+  set_rownames(.[,1]) |> 
+  dplyr::select(3:4) |> as.matrix() |> oddsratio()

@@ -38,8 +38,8 @@ ICER_all$az_05_ext %>% mutate(version = "ext", Type = "az") %>%
   facet_wrap(~Type)+
   theme_bw() +
   custom_theme +
-  labs(x = "Baseline ICER relative to GDP-per-capita",
-       y = "ICER relative to GDP-per-capita\nextended time horizon") +
+  labs(x = "Baseline ICER as proportions of GDP per capita",
+       y = "ICERs as proportions of GDP per capita\nusing extended time horizon") +
   theme(legend.position = "top") -> p1
 
 ICER_all$az_05_low %>% mutate(version = "low", Type = "az") %>% 
@@ -50,6 +50,7 @@ ICER_all$az_05_low %>% mutate(version = "low", Type = "az") %>%
   mutate(month = month(date_start)) %>% 
   select(iso3c, Type, month, scenario, ICER_scaled, version, econ_id) |> 
   filter(econ_id == 1) %>% 
+  mutate(ICER_scaled = round(ICER_scaled, 2)) |> 
   mutate(ICER_scaled= cut(ICER_scaled,
                           breaks = c(-Inf, 0.1, 0.3, 0.5, 1, Inf),
                           labels = c("<0.1",
@@ -80,8 +81,8 @@ ICER_all$az_05_low %>% mutate(version = "low", Type = "az") %>%
   facet_wrap(~Type)+
   theme_bw() +
   custom_theme +
-  labs(x = "Baseline ICER relative to GDP-per-capita",
-       y = "ICER relative to GDP-per-capita\nlow vaccine efficacy set",
+  labs(x = "Baseline ICERs as porportions of GDP per capita",
+       y = "ICERs as proportions of GDP per capita\nusing low vaccine efficacy set",
        fill = "Counts") +
   theme(legend.position = "top",
         legend.key.width = unit(3, 'cm')) -> p2
@@ -156,8 +157,50 @@ ICER_all$az_05_ext %>% mutate(version = "ext", Type = "az") %>%
   #                                    "0.3-0.5") &
   #                           ext %in% c("0.5-1",
   #                                     ">1") ~ "under")) |>
-  mutate(bias = if_else(ext > bc, "under", "over")) |> 
+  mutate(bias = if_else(ext > bc, "SA > BC", "SA < BC")) |> 
   # filter(!is.na(bias)) |> 
   group_by(Type, month, bias) |> tally() |> 
   ggplot(aes(x = month, y = n, group = Type, color = Type)) +
   geom_line() +facet_grid(~bias)
+
+
+ICER_all$az_05_low %>% mutate(version = "low", Type = "az") %>% 
+  bind_rows(ICER_all$az_05 %>% mutate(version = "bc", Type = "az")) %>% 
+  bind_rows(ICER_all$pf_05_low %>% mutate(version = "low", Type = "pf")) %>% 
+  bind_rows(ICER_all$pf_05 %>% mutate(version = "bc", Type = "pf")) |> 
+  dplyr::select(scenario_id, econ_id, Type, version, dalys, scenario, date_start, iso3c) |> 
+  # mutate(ICER_scaled = round(ICER_scaled, 2)) |> 
+  pivot_wider(names_from = version,
+              values_from = dalys) |> 
+  filter(Type == "pf", low > bc)
+
+
+ICER_all$az_05_low %>% mutate(version = "low", Type = "az") %>% 
+  bind_rows(ICER_all$az_05 %>% mutate(version = "bc", Type = "az")) %>% 
+  bind_rows(ICER_all$pf_05_low %>% mutate(version = "low", Type = "pf")) %>% 
+  bind_rows(ICER_all$pf_05 %>% mutate(version = "bc", Type = "pf")) %>% 
+  left_join(group_income, by = "iso3c") %>% 
+  mutate(month = month(date_start)) %>% 
+  select(iso3c, Type, month, scenario, ICER_scaled, version, econ_id) |> 
+  filter(econ_id == 1) %>% 
+  mutate(ICER_scaled = round(ICER_scaled, 2)) |> 
+  mutate(ICER_scaled= cut(ICER_scaled,
+                          breaks = c(-Inf, 0.1, 0.3, 0.5, 1, Inf),
+                          labels = c("<0.1",
+                                     "0.1-0.3",
+                                     "0.3-0.5",
+                                     "0.5-1",
+                                     ">1"))) |> 
+  pivot_wider(names_from = version, values_from = ICER_scaled) %>% 
+  mutate(econ_id = factor(econ_id,
+                          labels = c("Lower bounds VE estimates")),
+         Type = factor(Type, levels = c("az","pf"),
+                       labels = c("Viral vector vaccines",
+                                  "mRNA vaccines")),
+         scenario = factor(scenario,
+                           levels = c("slow", "medium", "fast"),
+                           labels = c("Slow",
+                                      "Medium",
+                                      "Fast"))) |> 
+  group_by(low, bc, Type) |> tally()  |> 
+  filter(bc == ">1" & low == "0.5-1")

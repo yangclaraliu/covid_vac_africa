@@ -16,6 +16,11 @@ model_cost_vaccines <- lm(value ~ iso3c + Type + Elapse + Rate,
 summary(model_cost_vaccines)
 # plot(model)
 
+data_new <- data.frame(iso3c = "ETH",
+                       Type = "AZ",
+                       Elapse = 12,
+                       Rate = 275)
+
 readxl::read_excel(paste0(path_dropbox,
                           "Africa Vaccine Cost 16_03_22.xlsx"),
                    sheet = "Extrapolation") %>% 
@@ -24,11 +29,6 @@ readxl::read_excel(paste0(path_dropbox,
   .[,c(1,2)] %>% 
   mutate(iso3c = countrycode(Country, "country.name", "iso3c")) -> group_income
   
-
-
-cost_vaccines %>% filter(`Country Name` == "Angola")
-
-
 readxl::read_excel(paste0(path_dropbox,
                           "COVID care unit cost - Africa.xlsx"),
                    sheet = 1) %>% 

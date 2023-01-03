@@ -371,4 +371,16 @@ CJ(scenario_id = 1:36,
          tot_cost_novac = death_management_cost_novac + critical_care_cost_novac + severe_care_cost_novac + home_care_cost_novac,
          rr_cost = tot_cost/tot_cost_novac) -> cost_all_low
 
+cost_deaths_management |> dplyr::select(scenario_id, population, Type, deaths_management_cost ) |> mutate(version = "bc") |> 
+  bind_rows(cost_deaths_management_low |> dplyr::select(scenario_id, population, Type, deaths_management_cost) |> mutate(version = "low")) |> 
+  filter(Type == "pfizer") |> 
+  pivot_wider(names_from = "version",
+              values_from = deaths_management_cost) |> 
+  filter(bc > low)
+
+res_low$pfizer$fatal |> group_by(scenario_id, population, year, group) |> summarise(value = sum(value)) |> mutate(version = "low") |> 
+  bind_rows(res$pfizer$fatal |> group_by(scenario_id, population, year, group) |> summarise(value = sum(value)) |> mutate(version = "bc"))|> 
+  pivot_wider(names_from = "version",
+              values_from = value) |> 
+  filter(low < bc, group == "60-64")
 
